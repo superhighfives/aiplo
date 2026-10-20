@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>aiplo</title>
+  </head>
+  <body>
+    <div id="gallery" hidden>
+      <header class="gallery-head">
+        <h1>aiplo</h1>
+        <p class="sub">Pen plotter sketchbook. Each piece is a script in <code>src/art/</code>.</p>
+      </header>
+    </div>
+    <div id="app" hidden>
+      <aside id="left" class="panel">
+        <a href="#/" class="back">← Gallery</a>
+        <header class="piece-head">
+          <h1 id="piece-title"></h1>
+          <p id="piece-desc" class="sub"></p>
+        </header>
+        <section>
+          <h2>Knobs <button id="reset-knobs" class="mini" title="Reset this piece's knobs to defaults">Reset</button></h2>
+          <div id="gen-params" class="params"></div>
+        </section>
+        <section>
+          <h2>Paper <button id="reset-paper" class="mini" title="Reset to this piece's default paper">Reset</button></h2>
+          <div id="paper-params" class="params"></div>
+        </section>
+        <section>
+          <h2>Post-process <button id="reset-post" class="mini" title="Reset post-processing to defaults">Reset</button></h2>
+          <div id="post-params" class="params"></div>
+        </section>
+      </aside>
+      <main id="stage">
+        <svg id="preview" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="statusbar">
+          <span id="status"></span>
+          <span id="stats"></span>
+        </div>
+      </main>
+      <aside id="right" class="panel">
+        <section>
+          <h2>Output</h2>
+          <div class="buttons">
+            <button id="export-svg">Export SVG</button>
+            <button id="regen">Regenerate</button>
+          </div>
+        </section>
+        <section>
+          <h2>Layers</h2>
+          <div id="layers"></div>
+        </section>
+        <section>
+          <h2>AxiDraw</h2>
+          <div class="buttons">
+            <button id="connect">Connect</button>
+            <span id="conn-status" class="muted">not connected</span>
+          </div>
+          <div class="buttons">
+            <button id="pen-up">Pen up</button>
+            <button id="pen-down">Pen down</button>
+            <button id="motors-off" title="Disable motors so you can move the carriage by hand. Move it to the home corner (top-left) before plotting.">Motors off</button>
+          </div>
+          <div class="jog">
+            <select id="jog-step"><option>1</option><option selected>10</option><option>50</option></select>
+            <button data-jog="0,-1">↑</button>
+            <button data-jog="-1,0">←</button>
+            <button data-jog="1,0">→</button>
+            <button data-jog="0,1">↓</button>
+            <button id="home">Home</button>
+          </div>
+          <div class="buttons">
+            <button id="plot" class="primary">Plot</button>
+            <button id="pause">Pause</button>
+            <button id="stop">Stop</button>
+          </div>
+          <progress id="progress" max="1" value="0"></progress>
+          <div id="plot-status" class="muted"></div>
+        </section>
+        <section>
+          <h2>Plot settings <button id="reset-plot" class="mini" title="Reset speeds and pen settings to defaults">Reset</button></h2>
+          <div id="plot-params" class="params"></div>
+        </section>
+      </aside>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
