@@ -10,26 +10,83 @@ npm run plot    # build and serve on :5180 for plotting (never live-reloads)
 
 Plotting needs Chrome or Edge (WebSerial). Everything else works in any modern browser.
 
+![The aiplo gallery: a filterable grid of artworks with thumbnails](docs/images/gallery.png)
+
+Open a piece to turn its knobs, preview it on paper, and plot it:
+
+![The Ridgelines editor: knobs on the left, the preview in the middle, layers and AxiDraw controls on the right](docs/images/editor-ridgelines.png)
+
+![The moment: a lettered poster of the sky, moon and weather at one minute in one place](docs/images/editor-moment.png)
+
 ## The gallery
 
-There are 67 pieces, searchable and filterable by series and by what they use (a place, a date, a photo, audio, your words…).
+There are 67 pieces, searchable and filterable by series and by what they use (a place, a date, a photo, audio, your words…). Every piece renders something with no input (a default place, a demo image, a public-domain demo song), so you can open anything and start turning knobs. The images below are each piece's defaults.
 
-| Series | Pieces |
-|---|---|
-| **Terrain** | Ridgelines, Contours, Hachures |
-| **Streets and water** | Street grid, How far you can walk, Rivers, Buildings |
-| **World** | Coastline ripples, The world from your door, Everywhere you've been, Your runs or rides, Engraved terrain, Earthquakes |
-| **Sky and time** | Star chart, Sun paths, Moon calendar, Wind on a day, A year of weather, Tides |
-| **Moments** | The moment, Concert night, Birth poster, Powers of ten, Two hometowns, The route, Where our photos were taken |
-| **Music** | Lyric ridgelines, The record, Words sized by loudness, The song as a mountain range, Melody line, Rhythm mandala, Chord journey, MIDI spiral, Duet, Your year in music |
-| **Sound and personal** | Unknown Pleasures from your song, Voice groove, Signature, Heartbeat, GitHub year, A chess game |
-| **Words and hands** | Handwriting restored, Calligram, Family tree, Life timeline, Fingerprint |
-| **Photographs** | Squiggle portrait, Spiral halftone, One-line drawing, Three-pen photo, Edge flow |
-| **Generative** | Harmonograph, Spirograph, Mazes and Truchet tiles, Space-filling curve, Moiré, Wave interference, Differential growth, Circle packing and Voronoi, A name as a seed |
-| **Studies** | Terrain explorer, Flow field |
-| **Tools** | SVG import, Calibration, Scratchpad, Lettering |
+### Terrain
 
-Every piece renders something with no input (a default place, a demo image, a public-domain demo song), so you can open anything and start turning knobs.
+Ridgelines, Contours, Hachures.
+
+![Terrain: Ridgelines, Contours, Hachures](docs/images/series-terrain.png)
+
+### Streets and water
+
+Street grid, How far you can walk, Rivers, Buildings.
+
+![Streets and water: Street grid, How far you can walk, Rivers, Buildings](docs/images/series-streets-and-water.png)
+
+### World
+
+Coastline ripples, The world from your door, Everywhere you've been, Your runs or rides, Engraved terrain, Earthquakes.
+
+![World: Coastline ripples, The world from your door, Everywhere you've been, Your runs or rides, Engraved terrain, Earthquakes](docs/images/series-world.png)
+
+### Sky and time
+
+Star chart, Sun paths, Moon calendar, Wind on a day, A year of weather, Tides.
+
+![Sky and time: Star chart, Sun paths, Moon calendar, Wind on a day, A year of weather, Tides](docs/images/series-sky-and-time.png)
+
+### Moments
+
+The moment, Concert night, Birth poster, Powers of ten, Two hometowns, The route, Where our photos were taken.
+
+![Moments: The moment, Concert night, Birth poster, Powers of ten, Two hometowns, The route, Where our photos were taken](docs/images/series-moments.png)
+
+### Music
+
+Lyric ridgelines, The record, Words sized by loudness, The song as a mountain range, Melody line, Rhythm mandala, Chord journey, MIDI spiral, Duet, Your year in music.
+
+![Music: Lyric ridgelines, The record, Words sized by loudness, The song as a mountain range, Melody line, Rhythm mandala, Chord journey, MIDI spiral, Duet, Your year in music](docs/images/series-music.png)
+
+### Sound and personal
+
+Unknown Pleasures from your song, Voice groove, Signature, Heartbeat, GitHub year, A chess game.
+
+![Sound and personal: Unknown Pleasures from your song, Voice groove, Signature, Heartbeat, GitHub year, A chess game](docs/images/series-sound-and-personal.png)
+
+### Words and hands
+
+Handwriting restored, Calligram, Family tree, Life timeline, Fingerprint.
+
+![Words and hands: Handwriting restored, Calligram, Family tree, Life timeline, Fingerprint](docs/images/series-words-and-hands.png)
+
+### Photographs
+
+Squiggle portrait, Spiral halftone, One-line drawing, Three-pen photo, Edge flow.
+
+![Photographs: Squiggle portrait, Spiral halftone, One-line drawing, Three-pen photo, Edge flow](docs/images/series-photographs.png)
+
+### Generative
+
+Harmonograph, Spirograph, Mazes and Truchet tiles, Space-filling curve, Moiré, Wave interference, Differential growth, Circle packing and Voronoi, A name as a seed.
+
+![Generative: Harmonograph, Spirograph, Mazes and Truchet tiles, Space-filling curve, Moiré, Wave interference, Differential growth, Circle packing and Voronoi, A name as a seed](docs/images/series-generative.png)
+
+### Studies and tools
+
+Terrain explorer, Flow field; Calibration, Scratchpad, Lettering, and SVG import (plot any SVG).
+
+![Studies and tools: Terrain explorer, Flow field; Calibration, Scratchpad, Lettering, and SVG import (plot any SVG)](docs/images/series-studies-and-tools.png)
 
 ## Plotting
 
@@ -130,6 +187,6 @@ Data comes from free, keyless services, fetched in the browser and cached in mem
 - **Routes:** [OSRM](https://project-osrm.org/) routing.
 - **Lyrics:** [LRCLIB](https://lrclib.net/) synced lyrics.
 - **GitHub contributions:** [github-contributions-api](https://github.com/grubersjoe/github-contributions-api).
-- **Fonts:** Hershey fonts (public domain, Dr. A. V. Hershey), JSON from [hersheytext](https://github.com/techninja/hersheytext) (MIT).
+- **Fonts:** Hershey fonts (public domain, Dr. A. V. Hershey), JSON from [hersheytext](https://github.com/techninja/hersheytext) (MIT; see `src/lib/fonts/LICENSE-hersheytext`).
 
 Lyrics fetched from LRCLIB stay in your browser for your own prints. Music pieces default to a synthesized public-domain song ("Twinkle, Twinkle, Little Star"), and real song lyrics should never be committed to this repo.
