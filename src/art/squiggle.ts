@@ -7,7 +7,7 @@ export default defineArtwork({
   title: 'Squiggle portrait',
   description: 'A photo drawn as rows of sine squiggles that swell and tighten where the image is dark.',
   order: 50,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     ...imageParams(),
     { type: 'number', key: 'rows', label: 'Rows', min: 20, max: 250, step: 1, default: 80 },

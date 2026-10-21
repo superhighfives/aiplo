@@ -96,7 +96,7 @@ export default defineArtwork({
   title: 'Tides',
   description: "A month of a harbour's tide, one ridgeline per day, from NOAA predictions.",
   order: 35,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     { type: 'select', key: 'station', label: 'Station', options: STATIONS, default: '9414290' },
     { type: 'text', key: 'customId', label: 'NOAA station ID', default: '', placeholder: 'e.g. 9410170', show: (v) => v.station === 'custom', hint: 'Find IDs at tidesandcurrents.noaa.gov' },

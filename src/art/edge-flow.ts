@@ -34,7 +34,7 @@ export default defineArtwork({
   title: 'Edge flow',
   description: 'Streamlines that run along the edges and contours of a photo, packed tighter where it is dark.',
   order: 54,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     ...imageParams(),
     { type: 'number', key: 'dmin', label: 'Spacing, dark (mm)', min: 0.4, max: 5, step: 0.05, default: 0.8 },

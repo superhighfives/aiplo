@@ -213,7 +213,7 @@ export default defineArtwork({
   title: 'GitHub year',
   description: 'A year of GitHub contributions as an isometric skyline of days, or as ridgelines.',
   order: 44,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 18 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 18 },
   params: [
     { type: 'text', key: 'user', label: 'GitHub user', default: 'torvalds' },
     { type: 'number', key: 'year', label: 'Year', min: 2008, max: lastYear + 1, step: 1, default: lastYear },

@@ -35,7 +35,7 @@ export default defineArtwork({
   title: 'Wind on a day',
   description: 'The real wind at a place and hour, from reanalysis data, drawn as evenly spaced streamlines.',
   order: 33,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 15 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 15 },
   params: [
     ...terrainParams({ name: 'Brest, France', lat: 48.39, lon: -4.49 }, 6),
     { type: 'date', key: 'date', label: 'Date & time (local)', time: true, default: '2023-11-02T03:00', hint: 'Default: Storm Ciarán crossing the Channel' },

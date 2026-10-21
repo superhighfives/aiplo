@@ -22,7 +22,7 @@ export default defineArtwork({
   title: 'Moon calendar',
   description: 'Every night of a year as a little hatched moon, in a month-by-day grid or one long spiral.',
   order: 32,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 15 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 15 },
   params: [
     { type: 'number', key: 'year', label: 'Year', min: 1800, max: 2200, step: 1, default: 2026 },
     { type: 'select', key: 'layout', label: 'Layout', default: 'grid', options: [['grid', 'Months × days'], ['spiral', 'Spiral']] },

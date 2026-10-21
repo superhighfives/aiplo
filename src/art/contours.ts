@@ -10,7 +10,7 @@ export default defineArtwork({
   title: 'Contours',
   description: 'A topographic map of anywhere, with index lines, height bands and a coastline across up to four pens.',
   order: 2,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 20 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 20 },
   params: [
     ...terrainParams({ name: 'Taranaki Maunga, New Zealand', lat: -39.2968, lon: 174.0634 }, 11),
     { type: 'number', key: 'interval', label: 'Interval (m)', min: 5, max: 500, step: 5, default: 50, hint: 'Height between contour lines' },

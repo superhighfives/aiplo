@@ -20,7 +20,7 @@ export default defineArtwork({
   title: 'Buildings',
   description: 'Every building footprint around a place, from OpenStreetMap, each one outlined and hatched at its own angle.',
   order: 13,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     ...osmParams({ name: 'San Polo, Venice', lat: 45.4375, lon: 12.3330 }, 300, { min: 50, max: 1000, step: 25 }),
     { type: 'select', key: 'angle', label: 'Hatch angle', default: 'edge', options: [['edge', 'Along the longest wall'], ['across', 'Across the longest wall'], ['random', 'Random'], ['fixed', 'Fixed']] },

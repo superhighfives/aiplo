@@ -66,7 +66,7 @@ export default defineArtwork({
   title: 'How far you can walk',
   description: 'Isochrones on the real street network: a ring for every few minutes you could walk from one spot, from OpenStreetMap.',
   order: 11,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     ...osmParams({ name: 'Rialto, Venice', lat: 45.4380, lon: 12.3359 }, 1000, { min: 300, max: 2500, step: 50 }),
     { type: 'number', key: 'speed', label: 'Walking speed (km/h)', min: 2, max: 8, step: 0.1, default: 4.8 },

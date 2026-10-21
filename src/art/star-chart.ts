@@ -91,7 +91,7 @@ export default defineArtwork({
   title: 'Star chart',
   description: 'The sky above any place at any moment: stars by magnitude, constellation figures, horizon and cardinal points.',
   order: 30,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 18 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 18 },
   params: [
     { type: 'location', key: 'loc', label: 'Location', default: { name: 'Royal Observatory, Greenwich', lat: 51.4769, lon: -0.0005 } },
     { type: 'date', key: 'date', label: 'Date & time (local)', time: true, default: '2000-01-01T00:00', hint: 'Wall-clock time at the place' },

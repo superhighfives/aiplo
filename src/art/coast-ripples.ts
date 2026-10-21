@@ -56,7 +56,7 @@ export default defineArtwork({
   title: 'Coastline ripples',
   description: 'Water drawn as ripple lines echoing the coast outward, like the seas on old Japanese maps.',
   order: 20,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 18 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 18 },
   params: [
     ...terrainParams({ name: 'Matsushima Bay, Japan', lat: 38.3500, lon: 141.1050 }, 12),
     { type: 'number', key: 'seaLevel', label: 'Sea level (m)', min: -5, max: 10, step: 0.5, default: 1, hint: 'Ground at or below this counts as sea; raise it if flat coasts come out noisy' },

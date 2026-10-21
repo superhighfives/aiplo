@@ -257,7 +257,7 @@ export default defineArtwork({
   title: 'Mazes and Truchet tiles',
   description: 'A perfect maze, optionally grown inside letterforms with its solution on a second pen, or Truchet tiles that join into long curves.',
   order: 62,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 15 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 15 },
   params: [
     { type: 'select', key: 'style', label: 'Style', options: [['maze', 'Maze'], ['arcs', 'Truchet: arcs'], ['lines', 'Truchet: diagonals']], default: 'maze' },
     { type: 'seed', key: 'seed', label: 'Seed', default: 1 },

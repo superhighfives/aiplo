@@ -18,7 +18,7 @@ export default defineArtwork({
   title: 'Street grid',
   description: 'Every street within a radius of anywhere, from OpenStreetMap: major roads, streets and paths on separate pens.',
   order: 10,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     ...osmParams({ name: 'Eixample, Barcelona', lat: 41.3905, lon: 2.1600 }, 1200, { min: 100, max: 3000, step: 50 }),
     { type: 'select', key: 'crop', label: 'Crop', default: 'circle', options: [['circle', 'Circle'], ['rect', 'Rectangle']] },

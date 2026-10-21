@@ -66,7 +66,7 @@ export default defineArtwork({
   title: 'Earthquakes',
   description: "A year of a region's earthquakes, each drawn as ripples that grow with its magnitude.",
   order: 26,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 18 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 18 },
   params: [
     { type: 'location', key: 'loc', label: 'Centre', default: { name: 'Japan', lat: 37.5, lon: 140.5 } },
     { type: 'number', key: 'radius', label: 'Radius (km)', min: 50, max: 5000, step: 50, default: 900, hint: 'Map half-width; quakes are searched a little beyond it' },

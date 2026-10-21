@@ -53,7 +53,7 @@ export default defineArtwork({
   title: 'Three-pen photo',
   description: 'A colour photo separated into cyan, magenta and yellow (plus optional black), each hatched at its own angle.',
   order: 53,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     ...imageParams(),
     { type: 'number', key: 'spacing', label: 'Line spacing (mm)', min: 0.5, max: 4, step: 0.05, default: 1, hint: 'Closest spacing, reached at full ink' },

@@ -52,7 +52,7 @@ export default defineArtwork({
   title: 'Circle packing and Voronoi',
   description: 'Circles packed largest-first, or relaxed Voronoi cells, optionally sized by a photo so dark areas fill with small, dense shapes.',
   order: 67,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 15 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 15 },
   params: [
     { type: 'select', key: 'style', label: 'Style', options: [['circles', 'Circle packing'], ['voronoi', 'Voronoi cells']], default: 'circles' },
     { type: 'seed', key: 'seed', label: 'Seed', default: 1 },

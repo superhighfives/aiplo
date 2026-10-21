@@ -6,7 +6,7 @@ export default defineArtwork({
   slug: 'my-piece',
   title: 'My piece',
   description: 'One line for the gallery card.',
-  paper: { paper: 'a4', orientation: 'landscape', margin: 15 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 15 },
   params: [
     { type: 'seed', key: 'seed', label: 'Seed', default: 1 },
     { type: 'number', key: 'count', label: 'Count', min: 1, max: 200, step: 1, default: 40 },

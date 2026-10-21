@@ -22,7 +22,7 @@ export default defineArtwork({
   title: 'Rivers',
   description: 'The mapped waterways of an area from OpenStreetMap (rivers, canals, streams and lakes), weighted by size. Everything in the area, not a traced watershed.',
   order: 12,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 20 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 20 },
   params: [
     ...osmParams({ name: 'Lake District, England', lat: 54.46, lon: -3.05 }, 6000, { min: 500, max: 20000, step: 500 }),
     { type: 'checkbox', key: 'streams', label: 'Streams', default: true },

@@ -23,7 +23,7 @@ export default defineArtwork({
   title: 'Wave interference',
   description: 'Ripples spreading from several sources, drawn as contour lines where they add up and cancel out.',
   order: 65,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 15 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 15 },
   params: [
     { type: 'select', key: 'from', label: 'Sources', options: [['random', 'Random'], ['places', 'Places']], default: 'random' },
     { type: 'number', key: 'count', label: 'Source count', min: 1, max: 12, step: 1, default: 3, show: (v) => v.from === 'random' },

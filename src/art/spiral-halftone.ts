@@ -7,7 +7,7 @@ export default defineArtwork({
   title: 'Spiral halftone',
   description: 'One continuous spiral from the centre out, wobbling wider wherever the photo is dark.',
   order: 51,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     ...imageParams(),
     { type: 'number', key: 'spacing', label: 'Turn spacing (mm)', min: 0.8, max: 8, step: 0.1, default: 2.6 },

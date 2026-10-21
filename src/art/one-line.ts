@@ -8,7 +8,7 @@ export default defineArtwork({
   title: 'One-line drawing',
   description: 'A photo as a single unbroken line: stippled dots joined by a short travelling-salesman tour.',
   order: 52,
-  paper: { paper: 'a4', orientation: 'portrait', margin: 20 },
+  paper: { paper: 'letter', orientation: 'portrait', margin: 20 },
   params: [
     ...imageParams(),
     { type: 'number', key: 'points', label: 'Points', min: 300, max: 20000, step: 100, default: 9000, hint: 'More points, more detail and a longer line' },

@@ -52,7 +52,7 @@ export default defineArtwork({
   title: "Everywhere you've been",
   description: 'Great-circle arcs between the places in your life, over a world map.',
   order: 22,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 15 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 15 },
   params: [
     { type: 'places', key: 'places', label: 'Places', default: { text: DEFAULT_PLACES, places: parseDefault(DEFAULT_PLACES) }, hint: 'One place per line, in order; or "lat, lon Name"' },
     { type: 'select', key: 'link', label: 'Connect', options: [['chain', 'One after another'], ['home', 'All from the first place'], ['all', 'Every pair']], default: 'chain' },

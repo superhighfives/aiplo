@@ -102,7 +102,7 @@ export default defineArtwork({
   title: 'Heartbeat',
   description: 'A pulse printed like an ECG strip: consecutive seconds stacked in rows, on optional graph paper.',
   order: 43,
-  paper: { paper: 'a4', orientation: 'landscape', margin: 15 },
+  paper: { paper: 'letter', orientation: 'landscape', margin: 15 },
   params: [
     { type: 'file', key: 'file', label: 'Trace (CSV / text)', accept: '.csv,.txt,.tsv,text/*', default: [], hint: 'Two columns (time in s, value) or one column of values. Without one, a synthetic trace is drawn.' },
     { type: 'number', key: 'rate', label: 'Sample rate (Hz)', min: 1, max: 5000, step: 1, default: 250, hint: 'For single-column files' },
