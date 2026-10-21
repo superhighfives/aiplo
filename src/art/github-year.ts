@@ -224,7 +224,7 @@ export default defineArtwork({
     { type: 'number', key: 'angle', label: 'View angle (°)', min: 5, max: 85, step: 1, default: 25, show: (v) => v.style === 'skyline', hint: 'Angle of the week axis; the weekday axis is perpendicular in plan' },
     { type: 'number', key: 'tilt', label: 'Tilt', min: 0.2, max: 1, step: 0.01, default: 0.85, show: (v) => v.style === 'skyline', hint: 'Lower = looking from closer to the ground' },
     { type: 'number', key: 'gap', label: 'Gap between bars', min: 0, max: 0.6, step: 0.01, default: 0.14, show: (v) => v.style === 'skyline' },
-    { type: 'number', key: 'shade', label: 'Side hatching (mm)', min: 0, max: 3, step: 0.05, default: 0.9, show: (v) => v.style === 'skyline', hint: 'Spacing of vertical lines on the shadow side; 0 = off' },
+    { type: 'number', key: 'shade', label: 'Side hatching (mm)', min: 0, max: 3, step: 0.05, default: 1.3, show: (v) => v.style === 'skyline', hint: 'Spacing of vertical lines on the shadow side; 0 = off' },
     { type: 'checkbox', key: 'shadePen', label: 'Hatching on a second pen', default: false, show: (v) => v.style === 'skyline' && v.shade > 0 },
     { type: 'select', key: 'rows', label: 'One row per', options: [['week', 'Week'], ['weekday', 'Weekday']], default: 'week', show: (v) => v.style === 'ridges' },
     { type: 'number', key: 'ridgeHeight', label: 'Peak height (mm)', min: 2, max: 80, step: 0.5, default: 30, show: (v) => v.style === 'ridges' },

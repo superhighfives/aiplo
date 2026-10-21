@@ -22,7 +22,7 @@ function loadTile(z: number, x: number, y: number): Promise<Float32Array> {
   if (!p) {
     p = (async () => {
       if (y < 0 || y >= n) return new Float32Array(256 * 256);
-      const res = await fetch(TILE_URL(z, x, y));
+      const res = await fetch(TILE_URL(z, x, y), { signal: AbortSignal.timeout(20000) });
       if (!res.ok) throw new Error(`tile ${key}: HTTP ${res.status}`);
       const bmp = await createImageBitmap(await res.blob());
       const c = new OffscreenCanvas(256, 256);

@@ -41,16 +41,23 @@ Pieces should render something with no input (demo image, synthetic audio, a def
 | `audio.ts` | Audio decoding (main thread), FFT, spectrograms, envelopes, a demo tune |
 | `image.ts`, `stipple.ts` | Photo knobs, darkness sampling, CMY channels, a demo image; weighted stippling and TSP tours |
 | `hatch.ts` | Polygon hatching and tone-by-hatching |
-| `hershey.ts` | Single-stroke lettering in 8 Hershey fonts |
+| `hershey.ts` | Single-stroke lettering in 8 Hershey fonts, including text along any path |
 | `streamlines.ts` | Evenly spaced streamlines for any vector field |
 | `gen-util.ts` | Fitting, clipping to shapes, insetting, stitching segments into long lines |
 | `files.ts` | Uploaded files in IndexedDB |
+| `song.ts`, `lyrics.ts` | A public-domain demo song with timed notes, chords and lyrics; LRC parsing and LRCLIB lookups for synced lyrics |
+| `music.ts`, `music-text.ts` | Pitch tracking, onsets and tempo, chord charts, MIDI read/write; lyric timing and loudness helpers |
+| `moments.ts`, `moments-geo.ts` | Poster building blocks: star charts, moon glyphs, sunrise/sunset, a day's weather, real time zones, globes and map frames |
+| `routing.ts`, `exif.ts` | OSRM routes (drive, walk, cycle); GPS and dates from JPEG EXIF |
+| `words-strokes.ts`, `words-shape.ts` | Recovering pen strokes from photos of handwriting; shape masks and spans for text-filled shapes |
 
 `../geom.ts` has clipping, simplification, resampling, smoothing and path optimisation.
 
 ### Gallery
 
-`kind: 'art'` (default), `'study'` or `'tool'`. Artworks are grouped into series by `order`: 1–9 Terrain, 10–19 Streets and water, 20–29 World, 30–39 Sky and time, 40–49 Sound and personal, 50–59 Photographs, 60+ Generative (or set `series` explicitly).
+`kind: 'art'` (default), `'study'` or `'tool'`. Artworks are grouped into series by `order`: 1–9 Terrain, 10–19 Streets and water, 20–29 World, 30–39 Sky and time, 40–49 Sound and personal, 50–59 Photographs, 60+ Generative. Set `series` to use another (Moments, Music, Words and hands). The gallery filters by series and by what a piece uses (a place, a date, a photo, audio…), worked out from its knobs.
+
+Music pieces default to the public-domain demo song; never commit real song lyrics.
 
 ### Captions and checks
 
@@ -63,6 +70,9 @@ Every piece gets an optional caption in the bottom margin (tokens `{title}`, `{p
 - `src/plotter/`: EBB serial driver, trapezoidal motion planner with junction-deviation cornering, and the plot loop (pause lifts the pen, stop returns home).
 
 ## Plotting
+
+While you're editing code, plot from `npm run plot` (a built copy on port 5180 that never live-reloads). Plot progress is saved as it goes, so after a crash or reload, reopening the piece puts the timeline back where it stopped.
+
 
 1. Motors off, push the carriage to the home corner (top-left), place the paper's top-left corner under the pen.
 2. Connect, tune pen up/down % with the buttons.

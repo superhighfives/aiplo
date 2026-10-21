@@ -72,17 +72,20 @@ export function demoSong(sampleRate = 16000): DemoSong {
     const f0 = hz(note.midi);
     const s0 = Math.floor(note.time * sampleRate);
     const len = Math.floor(note.duration * 0.95 * sampleRate);
+    // Formants near 700 Hz and 1200 Hz ("ah"), per harmonic.
+    const amps = Array.from({ length: 8 }, (_, k) => {
+      const fh = f0 * (k + 1);
+      return (1 / (k + 1)) * (0.35 + Math.exp(-(((fh - 700) / 250) ** 2)) + 0.6 * Math.exp(-(((fh - 1200) / 300) ** 2)));
+    });
+    // Accumulate phase so vibrato bends the pitch by ±10 cents, rather than drifting with time.
+    let phase = 0;
     for (let i = 0; i < len && s0 + i < n; i++) {
       const t = i / sampleRate;
       const env = Math.min(1, t / 0.04) * Math.min(1, (len - i) / (0.08 * sampleRate));
       const vib = 1 + 0.006 * Math.sin(2 * Math.PI * 5.5 * t) * Math.min(1, t / 0.3);
+      phase += (2 * Math.PI * f0 * vib) / sampleRate;
       let v = 0;
-      for (let h = 1; h <= 8; h++) {
-        const fh = f0 * h;
-        // Formants near 700 Hz and 1200 Hz ("ah").
-        const amp = (1 / h) * (0.35 + Math.exp(-(((fh - 700) / 250) ** 2)) + 0.6 * Math.exp(-(((fh - 1200) / 300) ** 2)));
-        v += amp * Math.sin(2 * Math.PI * fh * vib * t);
-      }
+      for (let h = 1; h <= 8; h++) v += amps[h - 1] * Math.sin(h * phase);
       out[s0 + i] += 0.22 * env * v;
     }
   }

@@ -106,6 +106,11 @@ export async function loadLyrics(v: Values, duration: number, status?: (m: strin
     case 'none':
       return [];
     case 'demo':
+      // The demo lyrics belong to the demo song; don't letter them over someone's own track.
+      if (Array.isArray(v.audio) && v.audio.length) {
+        status?.('Your track is loaded: choose Find online, Paste or Upload under Lyrics to add its words');
+        return [];
+      }
       return demoSong().lyrics.map((l, i, a) => ({ ...l, end: a[i + 1]?.time ?? demoSong().duration }));
     case 'paste':
       text = v.lyricsText ?? '';
