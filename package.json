@@ -21,5 +21,6 @@
     "chess.js": "^1.4.0",
     "d3-delaunay": "^6.0.4",
     "simplex-noise": "^4.0.3"
-  }
+  },
+  "license": "MIT"
 }

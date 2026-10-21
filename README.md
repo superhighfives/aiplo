@@ -190,3 +190,7 @@ Data comes from free, keyless services, fetched in the browser and cached in mem
 - **Fonts:** Hershey fonts (public domain, Dr. A. V. Hershey), JSON from [hersheytext](https://github.com/techninja/hersheytext) (MIT; see `src/lib/fonts/LICENSE-hersheytext`).
 
 Lyrics fetched from LRCLIB stay in your browser for your own prints. Music pieces default to a synthesized public-domain song ("Twinkle, Twinkle, Little Star"), and real song lyrics should never be committed to this repo.
+
+## License
+
+[MIT](LICENSE), © 2026 Charlie Gleason. Third-party data and fonts keep their own licences (see above).
