@@ -60,6 +60,13 @@ function captionSpec(): CaptionSpec | undefined {
   };
 }
 const visible = () => layers.filter((l) => !hiddenLayers().includes(l.name) && l.paths.length);
+/** Which pen to plot: '' = every visible pen in order, otherwise one pen by name. */
+let plotPen = '';
+/** The pens the next plot will draw (and the timeline covers). */
+const plotPens = () => {
+  const v = visible();
+  return plotPen && v.some((l) => l.name === plotPen) ? v.filter((l) => l.name === plotPen) : v;
+};
 
 const setStatus = (msg: string, error = false) => {
   const s = $('status');
@@ -140,9 +147,12 @@ function render() {
   add('rect', { class: 'paper', x: 0, y: 0, width: pw, height: ph });
   add('rect', { class: 'margin', x: m, y: m, width: Math.max(0, pw - 2 * m), height: Math.max(0, ph - 2 * m) });
   // Timeline: ink before the start point is drawn faded.
-  const timeline = startAt > 0 && !inJob ? splitAt(visible(), startAt) : null;
+  const targets = plotPens();
+  // Pens that aren't being plotted are shown faintly for context.
+  for (const l of visible()) if (!targets.includes(l)) add('path', { class: 'ink other', d: pathData(l.paths), stroke: l.color, 'stroke-width': state.post.penWidth });
+  const timeline = startAt > 0 && !inJob ? splitAt(targets, startAt) : null;
   for (const l of timeline?.before ?? []) add('path', { class: 'ink done', d: pathData(l.paths), stroke: l.color, 'stroke-width': state.post.penWidth });
-  for (const l of timeline?.after ?? visible()) {
+  for (const l of timeline?.after ?? targets) {
     if (state.post.showTravel) {
       const travel: Polyline[] = [];
       let cur: Pt = [0, 0];
@@ -176,7 +186,19 @@ function render() {
 
 const fmtTime = (t: number) => (t > 3600 ? `${Math.floor(t / 3600)}h ${Math.round((t % 3600) / 60)}m` : `${Math.floor(t / 60)}m ${Math.round(t % 60)}s`);
 
+/** Keeps the pen picker in step with the visible pens, preserving the choice if it still exists. */
+function updatePenPicker() {
+  const sel = $('plot-pen') as HTMLSelectElement;
+  const v = visible();
+  if (plotPen && !v.some((l) => l.name === plotPen)) plotPen = '';
+  sel.replaceChildren(new Option(v.length > 1 ? `All ${v.length} pens` : 'All pens', ''));
+  for (const [i, l] of v.entries()) sel.append(new Option(`${i + 1}. ${l.name}`, l.name));
+  sel.value = plotPen;
+  $('pen-pick').hidden = v.length < 2;
+}
+
 function renderLayerList() {
+  updatePenPicker();
   const root = $('layers');
   root.replaceChildren();
   layers.forEach((l, i) => {
@@ -249,6 +271,7 @@ function updateButtons() {
   const swapping = inJob && !plotter.busy;
   for (const id of ['pen-up', 'pen-down']) ($(id) as HTMLButtonElement).disabled = !c || (busy && !swapping);
   for (const id of ['motors-off', 'home', 'plot']) ($(id) as HTMLButtonElement).disabled = !c || busy;
+  ($('plot-pen') as HTMLSelectElement).disabled = busy;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-jog]')) b.disabled = !c || busy;
   ($('pause') as HTMLButtonElement).disabled = !busy;
   ($('stop') as HTMLButtonElement).disabled = !busy;
@@ -287,7 +310,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-jog]')) {
 
 $('plot').addEventListener('click', () => {
   if (plotTransform() === 'nofit') return plotStatus('Paper is larger than the machine travel. Pick a smaller paper or another machine.');
-  const { after, total, skipped } = splitAt(visible(), startAt);
+  const { after, total, skipped } = splitAt(plotPens(), startAt);
   const pens = after.filter((l) => l.paths.length);
   if (!pens.length) return plotStatus('Nothing to plot from here. Drag the timeline back or press From start.');
   paused = stopped = false;
@@ -343,6 +366,15 @@ $('plot').addEventListener('click', () => {
   });
 });
 
+$('plot-pen').addEventListener('change', () => {
+  plotPen = ($('plot-pen') as HTMLSelectElement).value;
+  // The timeline covers just the chosen pen(s), so start from its beginning.
+  startAt = 0;
+  restorePending = true;
+  render();
+  if (restorePending) restoreProgress();
+});
+
 // ---------- saved progress ----------
 // A plot's position is saved as it goes, so if the page reloads or crashes mid-plot, reopening
 // the piece puts the timeline back where it got to. It's keyed to the exact drawing (a
@@ -353,7 +385,7 @@ let restorePending = false;
 let lastSaved = 0;
 
 function fingerprint(): string {
-  const pens = visible().map((l) => [l.name, l.paths.length, Math.round(inkOf(l) * 10)]);
+  const pens = plotPens().map((l) => [l.name, l.paths.length, Math.round(inkOf(l) * 10)]);
   return String(seedFromText(JSON.stringify([pens, paperSize(), plotTransform()])));
 }
 
@@ -413,8 +445,9 @@ function updateTimeline() {
   ($('timeline-reset') as HTMLButtonElement).hidden = inJob || startAt === 0;
   if (inJob) return;
   input.value = String(startAt);
-  const pens = visible();
-  const shown = layerStats.filter((_, i) => !hiddenLayers().includes(layers[i].name));
+  const pens = plotPens();
+  const names = new Set(pens.map((l) => l.name));
+  const shown = layerStats.filter((_, i) => names.has(layers[i].name));
   const time = shown.reduce((t, s) => t + s.time, 0) * (1 - startAt);
   if (!pens.length) return void ($('timeline-label').textContent = '');
   if (startAt === 0) {
@@ -489,6 +522,7 @@ function openPiece(a: Artwork) {
     layerStats = [];
     density = null;
     startAt = 0;
+    plotPen = '';
     render();
   }
   $('gallery').hidden = true;

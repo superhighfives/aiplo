@@ -10,6 +10,14 @@ npm run plot    # build and serve on :5180 for plotting (never live-reloads)
 
 Plotting needs Chrome or Edge (WebSerial). Everything else works in any modern browser.
 
+**Highlights**
+
+- **Many pieces:** 67 artworks across terrain, maps, sky, music, photos, words and generative classics, each a short script with knobs.
+- **Resumable plots:** they pick up exactly where they stopped, after a pause, a stop, a reload or a crash. Or drag the timeline to start anywhere.
+- **Pen control:** plot all pens in order with swap prompts, or choose exactly which pen goes next.
+- **Pen lifts:** the app sets the servo's speed and waits exactly as long as each lift takes.
+- **Personal by design:** places, dates, songs with synced lyrics, photos, handwriting, a signature and edition numbers.
+
 ![The aiplo gallery: a filterable grid of artworks with thumbnails](docs/images/gallery.png)
 
 Open a piece to turn its knobs, preview it on paper, and plot it:
@@ -100,11 +108,21 @@ Terrain explorer, Flow field; Calibration, Scratchpad, Lettering, and SVG import
 
 ### While plotting
 
-- **Pens:** each layer is a pen. Layers plot in order, and the carriage returns home and waits for a pen swap in between. Untick a layer to skip it.
-- **Timeline:** drag the timeline to start from any point, even mid-line. The preview fades what will be skipped.
-- **Pause and stop:** **Pause** lifts the pen (you can swap pens). **Stop** returns home, and the timeline stays where the plot got to, so **Plot** carries on from there.
-- **Saved progress:** progress is saved as it plots. After a crash or reload, reopening the piece puts the timeline back where it stopped. Home the carriage, reconnect, then Plot.
-- **While editing code:** plot from `npm run plot` while code is changing. The dev server reloads the page when files change, which drops the AxiDraw connection.
+**Choose the pen.** Each layer is a pen, and the **Pen** dropdown next to Plot picks what to draw:
+
+- **All pens:** every pen in order. The carriage returns home and waits for you to swap pens in between, and the status says which pen is next.
+- **One pen** (e.g. "2. Index lines"): just that pen. The preview dims the others and the time estimate covers only it, so you can plot pen by pen, in any order, on your own schedule.
+
+Unticking a layer under **Layers** hides it from the preview, the SVG export and plotting altogether.
+
+**Pick up where you left off.**
+
+- **Timeline:** the timeline under Plot is a scrubber. Drag it to start anywhere in the plot, even partway along a line. The preview fades what will be skipped, and the label shows the pen and time left.
+- **Pause and Stop:** **Pause** lifts the pen so you can swap or fix a pen, and **Resume** carries on. **Stop** returns home and leaves the timeline where the plot got to, so pressing **Plot** again resumes from there.
+- **Crashes and reloads:** progress is saved as the plot runs. If the page reloads, the browser crashes or the USB cable is pulled, reopening the piece puts the timeline back where it stopped. Push the carriage home, reconnect, and press Plot.
+- **Unfinished paper:** the timeline also rescues a half-finished sheet from any earlier plot. Drag it until the faded part matches what's already on the paper.
+
+**Plot from a stable build.** While code is changing, plot from `npm run plot`. The dev server reloads the page when files change, which drops the AxiDraw connection; the app also asks before letting anything reload mid-plot.
 
 ### Pen settings
 

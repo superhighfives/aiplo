@@ -132,3 +132,6 @@ button.mini { font-size: 11px; padding: 1px 8px; }
 .badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .badge { font-size: 10px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .thumb, .thumb-frame { transition: none; } .card:hover .thumb { transform: none; } }
+.ink.other { opacity: 0.12; }
+.pen-pick { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--muted); font-size: 12px; }
+#plot-pen { flex: 1; min-width: 0; }
