@@ -84,3 +84,70 @@ export function text(str: string, o: TextOptions = {}): Polyline[] {
   });
   return out;
 }
+
+export interface TextAlongOptions {
+  font?: string;
+  /** Cap height in mm. */
+  size?: number;
+  /** Where along the path the text sits: 'start' | 'center' | 'end'. */
+  align?: 'start' | 'center' | 'end';
+  /** Shift along the path in mm (after alignment). */
+  shift?: number;
+  /** Distance of the baseline from the path, in mm (positive = to the left of travel). */
+  offset?: number;
+  tracking?: number;
+}
+
+/**
+ * Text set along a polyline (baseline follows the path, glyphs rotate with it).
+ * Lettering beyond either end of the path is dropped. Useful for lyrics on ridgelines,
+ * labels around circles, names along branches.
+ */
+export function textAlong(str: string, path: Polyline, o: TextAlongOptions = {}): Polyline[] {
+  const size = o.size ?? 3;
+  const k = size / CAP;
+  const font = o.font ?? 'futural';
+  const line = normalise(str).replace(/\n/g, ' ');
+  // Cumulative distances along the path.
+  const cum = [0];
+  for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+  const total = cum[cum.length - 1];
+  if (total <= 0) return [];
+  const width = measureText(line, { font, size, tracking: o.tracking });
+  let s0 = o.align === 'center' ? (total - width) / 2 : o.align === 'end' ? total - width : 0;
+  s0 += o.shift ?? 0;
+  // Point and unit tangent at distance s.
+  let seg = 1;
+  const at = (s: number): [number, number, number, number] => {
+    s = Math.max(0, Math.min(total, s));
+    while (seg > 1 && cum[seg - 1] > s) seg--;
+    while (seg < path.length - 1 && cum[seg] < s) seg++;
+    const a = path[seg - 1], b = path[seg];
+    const L = cum[seg] - cum[seg - 1] || 1;
+    const t = (s - cum[seg - 1]) / L;
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, (b[0] - a[0]) / L, (b[1] - a[1]) / L];
+  };
+  const out: Polyline[] = [];
+  let x = s0;
+  for (const ch of line) {
+    const g = ch === ' ' ? { strokes: [], advance: SPACE } : glyph(font, ch);
+    const adv = g.advance * k;
+    const mid = x + adv / 2;
+    if (ch !== ' ' && mid >= 0 && mid <= total) {
+      // Place each glyph rigidly, rotated to the tangent at its centre.
+      const [px, py, tx, ty] = at(mid);
+      const nx = ty, ny = -tx; // left normal in y-down screen space
+      const off = o.offset ?? 0;
+      for (const s of g.strokes)
+        out.push(
+          s.map(([gx, gy]) => {
+            const lx = gx * k - adv / 2; // along tangent, relative to glyph centre
+            const ly = (BASELINE - gy) * k + off; // up from baseline
+            return [px + tx * lx + nx * ly, py + ty * lx + ny * ly] as [number, number];
+          }),
+        );
+    }
+    x += adv + (o.tracking ?? 0) * size;
+  }
+  return out;
+}

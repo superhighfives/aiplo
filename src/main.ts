@@ -6,8 +6,8 @@ import type { Artwork } from './art/types';
 import { renderGallery } from './gallery';
 import { toLayers, translateLayers, type CaptionSpec, type Density, type Layer, type LayerStats } from './layers';
 import { defaultsOf, renderParams } from './params';
-import { Plotter, type PlotSettings } from './plotter/plotter';
-import { mulberry32 } from './random';
+import { liftTime, Plotter, type PlotSettings } from './plotter/plotter';
+import { mulberry32, seedFromText } from './random';
 import { captionDefs, MACHINES, paperDefaults, paperDefs, paperSize as sizeOf, pieceCaption, piecePaper, pieceValues, plotDefs, postDefs, resetInPlace, save, signatureDefs, state } from './state';
 import { pathData, toSVG } from './svg';
 import { inkOf, splitAt } from './timeline';
@@ -108,6 +108,7 @@ const engine = new Engine({
     layers = l;
     layerStats = st;
     density = d;
+    if (restorePending) restoreProgress();
     render();
   },
 });
@@ -309,6 +310,7 @@ $('plot').addEventListener('click', () => {
       await plotter.plot(machinePaths(l.paths), settings(), {
         onProgress: (f, pos) => {
           reached = total ? (done + f * ink) / total : 1;
+          saveProgress(reached);
           ($('timeline') as HTMLInputElement).value = String(reached);
           const [x, y] = toPreview(pos);
           marker.setAttribute('cx', String(x));
@@ -328,6 +330,8 @@ $('plot').addEventListener('click', () => {
   updateButtons();
   guard(async () => {
     await job;
+    if (stopped) saveProgress(reached, true);
+    else clearProgress();
     plotStatus(stopped ? `Stopped at ${(reached * 100).toFixed(1)}%. Press Plot to carry on from there.` : 'Done.');
   }).then(() => {
     // After a stop, the timeline stays where the plot got to, ready to resume.
@@ -337,6 +341,65 @@ $('plot').addEventListener('click', () => {
     updateButtons();
     render();
   });
+});
+
+// ---------- saved progress ----------
+// A plot's position is saved as it goes, so if the page reloads or crashes mid-plot, reopening
+// the piece puts the timeline back where it got to. It's keyed to the exact drawing (a
+// fingerprint of the visible pens and paper), so changed knobs don't resume the wrong plot.
+
+const PROGRESS_KEY = 'aiplo:progress:';
+let restorePending = false;
+let lastSaved = 0;
+
+function fingerprint(): string {
+  const pens = visible().map((l) => [l.name, l.paths.length, Math.round(inkOf(l) * 10)]);
+  return String(seedFromText(JSON.stringify([pens, paperSize(), plotTransform()])));
+}
+
+function saveProgress(f: number, force = false) {
+  if (!piece || (!force && performance.now() - lastSaved < 1000)) return;
+  lastSaved = performance.now();
+  try {
+    localStorage.setItem(PROGRESS_KEY + piece.slug, JSON.stringify({ fp: fingerprint(), f, at: Date.now() }));
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearProgress() {
+  if (!piece) return;
+  try {
+    localStorage.removeItem(PROGRESS_KEY + piece.slug);
+  } catch {
+    /* ignore */
+  }
+}
+
+function restoreProgress() {
+  restorePending = false;
+  if (!piece || inJob) return;
+  let saved: { fp: string; f: number; at: number } | null = null;
+  try {
+    saved = JSON.parse(localStorage.getItem(PROGRESS_KEY + piece.slug) ?? 'null');
+  } catch {
+    /* ignore */
+  }
+  if (!saved || saved.fp !== fingerprint() || !(saved.f > 0 && saved.f < 1)) return;
+  startAt = saved.f;
+  const when = new Date(saved.at).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  plotStatus(
+    `A plot of this piece stopped at ${(saved.f * 100).toFixed(1)}% (${when}). The timeline is set to carry on from there: ` +
+      'press Motors off, push the carriage to home (top-left), reconnect, then Plot.',
+  );
+  render();
+}
+
+// Warn before anything (including the dev server's live reload) unloads the page mid-plot.
+window.addEventListener('beforeunload', (e) => {
+  if (!inJob) return;
+  e.preventDefault();
+  e.returnValue = '';
 });
 
 // ---------- timeline ----------
@@ -412,6 +475,7 @@ const scheduleRegen = () => {
 };
 
 function openPiece(a: Artwork) {
+  if (piece !== a) restorePending = true;
   const switching = piece !== a;
   piece = a;
   document.title = `${a.title} · aiplo`;
@@ -480,8 +544,15 @@ const mountPlot = () =>
   renderParams($('plot-params'), plotDefs, state.plot, (key) => {
     save();
     // Speeds change the time estimate; pen settings don't need reprocessing.
-    if (['drawSpeed', 'travelSpeed', 'accel', 'cornering'].includes(key)) engine.process();
+    if (['drawSpeed', 'travelSpeed', 'accel', 'cornering', 'penUp', 'penDown', 'penUpSpeed', 'penDownSpeed', 'penUpWait', 'penDownWait'].includes(key)) engine.process();
+    updateLiftInfo();
   });
+
+/** Shows how long each lift and drop will take with the current pen settings. */
+function updateLiftInfo() {
+  const s = settings();
+  $('lift-info').textContent = `Pen lift ${liftTime(s, true)} ms · drop ${liftTime(s, false)} ms`;
+}
 
 // Each group's Reset restores just that group, in place, then redraws its controls.
 $('reset-knobs').addEventListener('click', () => {
@@ -507,11 +578,13 @@ $('reset-post').addEventListener('click', () => {
 $('reset-plot').addEventListener('click', () => {
   resetInPlace(state.plot, defaultsOf(plotDefs));
   mountPlot();
+  updateLiftInfo();
   engine.process();
 });
 
 mountPost();
 mountPlot();
+updateLiftInfo();
 
 if (!('serial' in navigator)) plotStatus('WebSerial unavailable: plotting needs Chrome or Edge. Export SVG still works.');
 updateButtons();

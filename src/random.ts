@@ -22,3 +22,13 @@ export function shuffle<T>(arr: T[], rng: Rng): T[] {
   }
   return arr;
 }
+
+/** A stable 32-bit seed from any text (e.g. a name and a date), via FNV-1a. */
+export function seedFromText(text: string): number {
+  let h = 0x811c9dc5;
+  for (const ch of text.normalize('NFC')) {
+    h ^= ch.codePointAt(0)!;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}

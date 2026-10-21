@@ -48,8 +48,10 @@ export const plotDefs: ParamDef[] = [
   { type: 'number', key: 'cornering', label: 'Cornering (mm)', min: 0.005, max: 1, step: 0.005, default: 0.05, hint: 'Junction deviation: higher = faster through corners, looser lines' },
   { type: 'number', key: 'penUp', label: 'Pen up (%)', min: 0, max: 100, step: 1, default: 70 },
   { type: 'number', key: 'penDown', label: 'Pen down (%)', min: 0, max: 100, step: 1, default: 30 },
-  { type: 'number', key: 'penUpDelay', label: 'Pen up delay (ms)', min: 0, max: 1000, step: 10, default: 300 },
-  { type: 'number', key: 'penDownDelay', label: 'Pen down delay (ms)', min: 0, max: 1000, step: 10, default: 300 },
+  { type: 'number', key: 'penUpSpeed', label: 'Lift speed (%)', min: 5, max: 100, step: 1, default: 60, hint: 'How fast the pen rises. Slower is gentler; the plotter waits exactly as long as the lift takes' },
+  { type: 'number', key: 'penDownSpeed', label: 'Lower speed (%)', min: 5, max: 100, step: 1, default: 40, hint: 'How fast the pen drops. Slower avoids blobs and bounces at the start of lines' },
+  { type: 'number', key: 'penUpWait', label: 'Extra wait after lift (ms)', min: 0, max: 1000, step: 10, default: 100, hint: 'Added to the lift time. Raise this if travel moves leave short tails' },
+  { type: 'number', key: 'penDownWait', label: 'Extra wait after lowering (ms)', min: 0, max: 1000, step: 10, default: 100, hint: 'Added to the lowering time. Raise this if line starts are faint' },
 ];
 
 const on = (v: Values) => v.on;

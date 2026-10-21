@@ -114,3 +114,4 @@ button.mini { font-size: 11px; padding: 1px 8px; }
 .density { fill: #ff3b30; }
 #gallery h3 { font-size: 13px; font-weight: 600; color: var(--text); margin: 28px 0 12px; }
 #gallery section > h2 + h3 { margin-top: 12px; }
+.lift-info { font-size: 12px; margin-top: 8px; }

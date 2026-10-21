@@ -9,8 +9,12 @@ export interface PlotSettings {
   cornering: number; // mm (junction deviation)
   penUp: number; // %
   penDown: number; // %
-  penUpDelay: number; // ms
-  penDownDelay: number; // ms
+  /** Servo speed when lifting / lowering, % of the fastest (see SERVO_FULL_SWEEP). */
+  penUpSpeed?: number;
+  penDownSpeed?: number;
+  /** Extra settling time after the servo reaches its position, ms. */
+  penUpWait?: number;
+  penDownWait?: number;
 }
 
 // AxiDraw V3: 2032 steps/inch at 16x microstepping.
@@ -20,13 +24,30 @@ const SERVO_MIN = 9855;
 const SERVO_MAX = 27831;
 const servoPos = (pct: number) => Math.round(SERVO_MIN + ((SERVO_MAX - SERVO_MIN) * pct) / 100);
 
+// The EBB slews the servo at a set rate (SC,11 up / SC,12 down), in pulse-width units
+// (83.3 ns) per 24 ms servo cycle. We set it explicitly, so a lift always takes the same,
+// known time. 100% speed sweeps the full 0–100% range in SERVO_FULL_SWEEP seconds, about as
+// fast as the AxiDraw's pen-lift servo physically moves.
+const SERVO_FULL_SWEEP = 0.25;
+const SERVO_CYCLE = 0.024;
+const servoRate = (speedPct: number) =>
+  Math.max(1, Math.round((((SERVO_MAX - SERVO_MIN) * SERVO_CYCLE) / SERVO_FULL_SWEEP) * (Math.max(1, Math.min(100, speedPct)) / 100)));
+
+/** How long a lift (up = true) or drop takes in ms: servo travel at the set speed, plus settling. */
+export function liftTime(s: PlotSettings, up: boolean): number {
+  const speed = (up ? s.penUpSpeed : s.penDownSpeed) ?? (up ? 60 : 40);
+  const wait = (up ? s.penUpWait : s.penDownWait) ?? 100;
+  const travel = (Math.abs(servoPos(s.penUp) - servoPos(s.penDown)) / servoRate(speed)) * SERVO_CYCLE * 1000;
+  return Math.round(travel + wait);
+}
+
 export function estimateTime(paths: Polyline[], s: PlotSettings): number {
   let t = 0;
   let cur: Pt = [0, 0];
   for (const p of paths) {
     if (dist(cur, p[0]) > 0.01) t += blocksTime(planPath([cur, p[0]], s.travelSpeed, s.accel, s.cornering));
     t += blocksTime(planPath(p, s.drawSpeed, s.accel, s.cornering));
-    t += (s.penUpDelay + s.penDownDelay) / 1000;
+    t += (liftTime(s, true) + liftTime(s, false)) / 1000;
     cur = p[p.length - 1];
   }
   return t + blocksTime(planPath([cur, [0, 0]], s.travelSpeed, s.accel, s.cornering));
@@ -68,15 +89,18 @@ export class Plotter {
   }
 
   async configurePen(s: PlotSettings) {
-    await this.e.command(`SC,4,${servoPos(s.penUp)}`);
-    await this.e.command(`SC,5,${servoPos(s.penDown)}`);
+    await this.e.command(`SC,4,${servoPos(s.penUp)}`); // pen-up position
+    await this.e.command(`SC,5,${servoPos(s.penDown)}`); // pen-down position
+    await this.e.command(`SC,11,${servoRate(s.penUpSpeed ?? 60)}`); // raise speed
+    await this.e.command(`SC,12,${servoRate(s.penDownSpeed ?? 40)}`); // lower speed
   }
+  // SP's delay holds back the next queued move until the pen has finished moving and settled.
   async penUp(s: PlotSettings) {
-    await this.e.command(`SP,1,${Math.round(s.penUpDelay)}`);
+    await this.e.command(`SP,1,${liftTime(s, true)}`);
     this.penIsDown = false;
   }
   async penDown(s: PlotSettings) {
-    await this.e.command(`SP,0,${Math.round(s.penDownDelay)}`);
+    await this.e.command(`SP,0,${liftTime(s, false)}`);
     this.penIsDown = true;
   }
   async motorsOn() {

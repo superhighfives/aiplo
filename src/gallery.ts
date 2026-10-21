@@ -24,6 +24,8 @@ const SERIES: [number, string][] = [
   [60, 'Photographs'],
   [Infinity, 'Generative'],
 ];
+/** Display order of series headings (pieces can also name their own series). */
+const SERIES_ORDER = ['Terrain', 'Streets and water', 'World', 'Sky and time', 'Moments', 'Music', 'Sound and personal', 'Words and hands', 'Photographs', 'Generative'];
 const seriesOf = (a: Artwork) => a.series ?? SERIES.find(([max]) => (a.order ?? 100) < max)![1];
 
 let worker: Worker | null = null;
@@ -149,7 +151,8 @@ export function renderGallery(root: HTMLElement) {
       const g = kind === 'art' ? seriesOf(a) : '';
       groups.set(g, [...(groups.get(g) ?? []), a]);
     }
-    for (const [series, list] of groups) {
+    const rank = (name: string) => (SERIES_ORDER.indexOf(name) + 1 || SERIES_ORDER.length + 1);
+    for (const [series, list] of [...groups].sort((a, b) => rank(a[0]) - rank(b[0]))) {
       if (series) {
         const h = document.createElement('h3');
         h.textContent = series;
