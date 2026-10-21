@@ -46,10 +46,10 @@ export const plotDefs: ParamDef[] = [
   { type: 'number', key: 'travelSpeed', label: 'Travel speed (mm/s)', min: 10, max: 220, step: 1, default: 120 },
   { type: 'number', key: 'accel', label: 'Acceleration (mm/s²)', min: 50, max: 3000, step: 10, default: 800 },
   { type: 'number', key: 'cornering', label: 'Cornering (mm)', min: 0.005, max: 1, step: 0.005, default: 0.05, hint: 'Junction deviation: higher = faster through corners, looser lines' },
-  { type: 'number', key: 'penUp', label: 'Pen up (%)', min: 0, max: 100, step: 1, default: 60 },
+  { type: 'number', key: 'penUp', label: 'Pen up (%)', min: 0, max: 100, step: 1, default: 70 },
   { type: 'number', key: 'penDown', label: 'Pen down (%)', min: 0, max: 100, step: 1, default: 30 },
-  { type: 'number', key: 'penUpDelay', label: 'Pen up delay (ms)', min: 0, max: 1000, step: 10, default: 150 },
-  { type: 'number', key: 'penDownDelay', label: 'Pen down delay (ms)', min: 0, max: 1000, step: 10, default: 150 },
+  { type: 'number', key: 'penUpDelay', label: 'Pen up delay (ms)', min: 0, max: 1000, step: 10, default: 300 },
+  { type: 'number', key: 'penDownDelay', label: 'Pen down delay (ms)', min: 0, max: 1000, step: 10, default: 300 },
 ];
 
 const on = (v: Values) => v.on;

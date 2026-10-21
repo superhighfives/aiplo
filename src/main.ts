@@ -10,6 +10,7 @@ import { Plotter, type PlotSettings } from './plotter/plotter';
 import { mulberry32 } from './random';
 import { captionDefs, MACHINES, paperDefaults, paperDefs, paperSize as sizeOf, pieceCaption, piecePaper, pieceValues, plotDefs, postDefs, resetInPlace, save, signatureDefs, state } from './state';
 import { pathData, toSVG } from './svg';
+import { inkOf, splitAt } from './timeline';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -137,7 +138,10 @@ function render() {
   add('rect', { class: 'machine', x: 0, y: 0, ...mRect });
   add('rect', { class: 'paper', x: 0, y: 0, width: pw, height: ph });
   add('rect', { class: 'margin', x: m, y: m, width: Math.max(0, pw - 2 * m), height: Math.max(0, ph - 2 * m) });
-  for (const l of visible()) {
+  // Timeline: ink before the start point is drawn faded.
+  const timeline = startAt > 0 && !inJob ? splitAt(visible(), startAt) : null;
+  for (const l of timeline?.before ?? []) add('path', { class: 'ink done', d: pathData(l.paths), stroke: l.color, 'stroke-width': state.post.penWidth });
+  for (const l of timeline?.after ?? visible()) {
     if (state.post.showTravel) {
       const travel: Polyline[] = [];
       let cur: Pt = [0, 0];
@@ -166,6 +170,7 @@ function render() {
     `${sum('count')} strokes · ${(sum('draw') / 1000).toFixed(1)} m ink · ${(sum('travel') / 1000).toFixed(1)} m travel · ` +
     `~${fmtTime(sum('time'))}${pens > 1 ? ` · ${pens} pens` : ''}${warn}`;
   renderLayerList();
+  updateTimeline();
 }
 
 const fmtTime = (t: number) => (t > 3600 ? `${Math.floor(t / 3600)}h ${Math.round((t % 3600) / 60)}m` : `${Math.floor(t / 60)}m ${Math.round(t % 60)}s`);
@@ -249,6 +254,7 @@ function updateButtons() {
   $('pause').textContent = paused ? 'Resume' : 'Pause';
   $('conn-status').textContent = c ? plotter.version.replace(/^EBBv\S+\s*/, '') || 'connected' : 'not connected';
   $('connect').textContent = c ? 'Reconnect' : 'Connect';
+  updateTimeline();
 }
 
 $('connect').addEventListener('click', () =>
@@ -280,12 +286,15 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-jog]')) {
 
 $('plot').addEventListener('click', () => {
   if (plotTransform() === 'nofit') return plotStatus('Paper is larger than the machine travel. Pick a smaller paper or another machine.');
-  const pens = visible();
-  if (!pens.length) return plotStatus('Nothing to plot.');
+  const { after, total, skipped } = splitAt(visible(), startAt);
+  const pens = after.filter((l) => l.paths.length);
+  if (!pens.length) return plotStatus('Nothing to plot from here. Drag the timeline back or press From start.');
   paused = stopped = false;
   const toPreview = plotTransform() === 'rotate' ? ([x, y]: Pt): Pt => [paperSize()[0] - y, x] : (p: Pt) => p;
   const t0 = performance.now();
+  let reached = startAt;
   const job = (async () => {
+    let done = skipped;
     for (let i = 0; i < pens.length && !stopped; i++) {
       const l = pens[i];
       if (i > 0) {
@@ -295,34 +304,75 @@ $('plot').addEventListener('click', () => {
         plotStatus(`Swap to “${l.name}”, then press Resume.`);
         await new Promise<void>((r) => (resume = r));
         if (stopped) break;
-      }
+      } else if (startAt > 0) plotStatus(`Starting at ${(startAt * 100).toFixed(1)}% with “${l.name}”.`);
+      const ink = inkOf(l);
       await plotter.plot(machinePaths(l.paths), settings(), {
         onProgress: (f, pos) => {
-          ($('progress') as HTMLProgressElement).value = (i + f) / pens.length;
+          reached = total ? (done + f * ink) / total : 1;
+          ($('timeline') as HTMLInputElement).value = String(reached);
           const [x, y] = toPreview(pos);
           marker.setAttribute('cx', String(x));
           marker.setAttribute('cy', String(y));
           const el = (performance.now() - t0) / 1000;
-          const pen = pens.length > 1 ? `${l.name} (${i + 1}/${pens.length}) · ` : '';
-          if (!paused) plotStatus(`${pen}${(f * 100).toFixed(1)}% · ${fmtTime(el)} elapsed`);
+          const pen = visible().length > 1 ? `${l.name} · ` : '';
+          if (!paused) plotStatus(`${pen}${(reached * 100).toFixed(1)}% · ${fmtTime(el)} elapsed`);
         },
         isPaused: () => paused,
         isStopped: () => stopped,
         waitResume: () => new Promise<void>((r) => (resume = r)),
       });
+      done += ink;
     }
   })();
   inJob = true;
   updateButtons();
   guard(async () => {
     await job;
-    plotStatus(stopped ? 'Stopped.' : 'Done.');
+    plotStatus(stopped ? `Stopped at ${(reached * 100).toFixed(1)}%. Press Plot to carry on from there.` : 'Done.');
   }).then(() => {
+    // After a stop, the timeline stays where the plot got to, ready to resume.
+    startAt = stopped && reached < 1 ? reached : 0;
     inJob = false;
     paused = false;
     updateButtons();
+    render();
   });
 });
+
+// ---------- timeline ----------
+
+/** Where the next plot starts, as a fraction of the visible pens' total ink. */
+let startAt = 0;
+
+function updateTimeline() {
+  const input = $('timeline') as HTMLInputElement;
+  input.disabled = inJob || !layers.length;
+  ($('timeline-reset') as HTMLButtonElement).hidden = inJob || startAt === 0;
+  if (inJob) return;
+  input.value = String(startAt);
+  const pens = visible();
+  const shown = layerStats.filter((_, i) => !hiddenLayers().includes(layers[i].name));
+  const time = shown.reduce((t, s) => t + s.time, 0) * (1 - startAt);
+  if (!pens.length) return void ($('timeline-label').textContent = '');
+  if (startAt === 0) {
+    $('timeline-label').textContent = `From the start · ~${fmtTime(time)}`;
+    return;
+  }
+  const first = splitAt(pens, startAt).after.find((l) => l.paths.length);
+  const pen = first && pens.length > 1 ? ` · ${first.name}` : '';
+  $('timeline-label').textContent = `Start at ${(startAt * 100).toFixed(1)}%${pen} · ~${fmtTime(time)} left`;
+}
+
+$('timeline').addEventListener('input', () => {
+  if (inJob) return;
+  startAt = Number(($('timeline') as HTMLInputElement).value);
+  render();
+});
+$('timeline-reset').addEventListener('click', () => {
+  startAt = 0;
+  render();
+});
+
 $('pause').addEventListener('click', () => {
   paused = !paused;
   if (!paused) {
@@ -374,6 +424,7 @@ function openPiece(a: Artwork) {
     layers = [];
     layerStats = [];
     density = null;
+    startAt = 0;
     render();
   }
   $('gallery').hidden = true;

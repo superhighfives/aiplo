@@ -153,7 +153,8 @@ export class Plotter {
       await this.penUp(s);
       await this.sendBlocks(planPath([this.pos, [0, 0]], s.travelSpeed, s.accel, s.cornering));
       await this.e.waitIdle();
-      hooks.onProgress(1, [0, 0]);
+      // Only a finished plot is 100%; after a stop, the last progress report is where it got to.
+      if (!hooks.isStopped()) hooks.onProgress(1, [0, 0]);
     } finally {
       this.busy = false;
     }

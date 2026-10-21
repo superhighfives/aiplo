@@ -80,7 +80,13 @@
             <button id="pause">Pause</button>
             <button id="stop">Stop</button>
           </div>
-          <progress id="progress" max="1" value="0"></progress>
+          <div class="timeline">
+            <input type="range" id="timeline" min="0" max="1" step="0.001" value="0" aria-label="Plot timeline: drag to choose where to start" />
+            <div class="timeline-meta">
+              <span id="timeline-label" class="muted"></span>
+              <button id="timeline-reset" class="mini" title="Plot from the beginning">From start</button>
+            </div>
+          </div>
           <div id="plot-status" class="muted"></div>
         </section>
         <section>
