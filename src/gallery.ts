@@ -1,7 +1,8 @@
 import { artworks } from './art';
 import type { Artwork } from './art/types';
 import { createWorker } from './engine';
-import type { Layer } from './layers';
+import { toLayers, translateLayers, type Layer, type ProcessOptions } from './layers';
+import { mulberry32 } from './random';
 import { pieceValues, piecePaper, paperSize, state } from './state';
 import { pathData } from './svg';
 import type { WorkerRequest, WorkerResponse } from './worker';
@@ -13,12 +14,26 @@ const SECTIONS: [Artwork['kind'], string][] = [
   ['tool', 'Tools'],
 ];
 
+/** Artworks are grouped into series by their `order` range unless they name one. */
+const SERIES: [number, string][] = [
+  [10, 'Terrain'],
+  [20, 'Streets and water'],
+  [30, 'World'],
+  [40, 'Sky and time'],
+  [50, 'Sound and personal'],
+  [60, 'Photographs'],
+  [Infinity, 'Generative'],
+];
+const seriesOf = (a: Artwork) => a.series ?? SERIES.find(([max]) => (a.order ?? 100) < max)![1];
+
 let worker: Worker | null = null;
 let nextId = 1;
 const pending = new Map<number, (r: WorkerResponse) => void>();
 let queue: Promise<unknown> = Promise.resolve();
 
-function render(req: Omit<Extract<WorkerRequest, { type: 'render' }>, 'id'>): Promise<WorkerResponse> {
+type Unsent<T> = T extends unknown ? Omit<T, 'id'> : never;
+
+function render(req: Unsent<Extract<WorkerRequest, { type: 'render' | 'processRaw' }>>): Promise<WorkerResponse> {
   if (!worker) {
     worker = createWorker();
     worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
@@ -47,10 +62,6 @@ function loadThumb(a: Artwork, box: HTMLElement) {
   const paper = piecePaper(a);
   const [pw, ph] = paperSize(paper);
   box.style.aspectRatio = `${pw} / ${ph}`;
-  if (a.mainThread) {
-    box.innerHTML = `<div class="thumb-label">${a.title}</div>`;
-    return;
-  }
   const key = JSON.stringify({ values, paper, wobble: state.post.wobble, wobbleScale: state.post.wobbleScale });
   try {
     const cached = JSON.parse(localStorage.getItem(THUMB_PREFIX + a.slug) ?? 'null');
@@ -63,26 +74,31 @@ function loadThumb(a: Artwork, box: HTMLElement) {
   }
   box.classList.add('loading');
   const m = paper.margin;
+  const width = Math.max(1, pw - 2 * m);
+  const height = Math.max(1, ph - 2 * m);
   queue = queue.then(async () => {
-    const r = await render({
-      type: 'render',
-      slug: a.slug,
-      values,
-      width: Math.max(1, pw - 2 * m),
-      height: Math.max(1, ph - 2 * m),
+    const opts: ProcessOptions = {
+      paper: [pw, ph],
       margin: m,
-      opts: {
-        paper: [pw, ph],
-        margin: m,
-        wobble: state.post.wobble,
-        wobbleScale: state.post.wobbleScale,
-        simplify: 0.15,
-        minLen: 0.3,
-        optimize: false,
-        mergeTol: 0,
-        plot: state.plot as never,
-      },
-    });
+      wobble: state.post.wobble,
+      wobbleScale: state.post.wobbleScale,
+      simplify: 0.15,
+      minLen: 0.3,
+      optimize: false,
+      mergeTol: 0,
+      plot: state.plot as ProcessOptions['plot'],
+    };
+    let r: WorkerResponse;
+    if (a.mainThread) {
+      // Needs the DOM (audio decoding, SVG layout): generate here, process in the worker.
+      try {
+        const seed = Number(values.seed ?? 1);
+        const out = await a.generate(values, { width, height, margin: m, seed, rng: mulberry32(seed), status: () => {} });
+        r = await render({ type: 'processRaw', layers: translateLayers(toLayers(out), m, m), opts });
+      } catch (e) {
+        r = { type: 'error', id: 0, message: String((e as Error)?.message ?? e) };
+      }
+    } else r = await render({ type: 'render', slug: a.slug, values, width, height, margin: m, opts });
     box.classList.remove('loading');
     if (r.type !== 'processed') {
       box.innerHTML = `<div class="thumb-label error">${r.type === 'error' ? r.message : 'Failed'}</div>`;
@@ -98,6 +114,26 @@ function loadThumb(a: Artwork, box: HTMLElement) {
   });
 }
 
+function card(a: Artwork) {
+  const card = document.createElement('a');
+  card.className = 'card';
+  card.href = `#/art/${a.slug}`;
+  const thumb = document.createElement('div');
+  thumb.className = 'thumb';
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  const t = document.createElement('div');
+  t.className = 'card-title';
+  t.textContent = a.title;
+  const d = document.createElement('div');
+  d.className = 'card-desc';
+  d.textContent = a.description ?? '';
+  meta.append(t, d);
+  card.append(thumb, meta);
+  loadThumb(a, thumb);
+  return card;
+}
+
 export function renderGallery(root: HTMLElement) {
   root.querySelector('.gallery-sections')?.remove();
   const sections = document.createElement('div');
@@ -107,28 +143,23 @@ export function renderGallery(root: HTMLElement) {
     if (!pieces.length) continue;
     const section = document.createElement('section');
     section.innerHTML = `<h2>${title}</h2>`;
-    const grid = document.createElement('div');
-    grid.className = `grid grid-${kind}`;
+    // Artworks get a sub-heading per series; studies and tools are one grid each.
+    const groups = new Map<string, Artwork[]>();
     for (const a of pieces) {
-      const card = document.createElement('a');
-      card.className = 'card';
-      card.href = `#/art/${a.slug}`;
-      const thumb = document.createElement('div');
-      thumb.className = 'thumb';
-      const meta = document.createElement('div');
-      meta.className = 'card-meta';
-      const t = document.createElement('div');
-      t.className = 'card-title';
-      t.textContent = a.title;
-      const d = document.createElement('div');
-      d.className = 'card-desc';
-      d.textContent = a.description ?? '';
-      meta.append(t, d);
-      card.append(thumb, meta);
-      grid.append(card);
-      loadThumb(a, thumb);
+      const g = kind === 'art' ? seriesOf(a) : '';
+      groups.set(g, [...(groups.get(g) ?? []), a]);
     }
-    section.append(grid);
+    for (const [series, list] of groups) {
+      if (series) {
+        const h = document.createElement('h3');
+        h.textContent = series;
+        section.append(h);
+      }
+      const grid = document.createElement('div');
+      grid.className = `grid grid-${kind}`;
+      for (const a of list) grid.append(card(a));
+      section.append(grid);
+    }
     sections.append(section);
   }
   root.append(sections);

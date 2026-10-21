@@ -1,5 +1,6 @@
 import type { Polyline, Pt } from '../geom';
 import { PALETTE, type Layer } from '../layers';
+import { loadFile } from '../lib/files';
 import { defineArtwork } from './types';
 
 const SKIP = 'defs, clipPath, mask, symbol, marker, pattern';
@@ -18,18 +19,19 @@ export default defineArtwork({
   order: 1,
   mainThread: true,
   params: [
-    { type: 'file', key: 'file', label: 'SVG file', accept: '.svg,image/svg+xml', default: { name: '', text: '' } },
+    { type: 'file', key: 'file', label: 'SVG file', accept: '.svg,image/svg+xml', default: [] },
     { type: 'select', key: 'fit', label: 'Placement', options: [['fit', 'Fit inside margins'], ['actual', 'Actual size (from paper origin)']], default: 'fit' },
     { type: 'number', key: 'scale', label: 'Scale (%)', min: 5, max: 400, step: 1, default: 100 },
     { type: 'select', key: 'layers', label: 'Pens', options: [['color', 'One per stroke colour'], ['group', 'One per top-level group'], ['single', 'Single pen']], default: 'color' },
     { type: 'number', key: 'tol', label: 'Curve sampling (mm)', min: 0.05, max: 2, step: 0.05, default: 0.2 },
   ],
-  generate(v, ctx) {
-    if (!v.file.text) {
+  async generate(v, ctx) {
+    const file = await loadFile(v.file);
+    if (!file) {
       ctx.status('Load an SVG file to plot it.');
       return [];
     }
-    const doc = new DOMParser().parseFromString(v.file.text, 'image/svg+xml');
+    const doc = new DOMParser().parseFromString(await file.blob.text(), 'image/svg+xml');
     if (doc.querySelector('parsererror') || doc.documentElement.nodeName !== 'svg') throw new Error('Could not parse SVG');
 
     // Geometry methods need layout, so mount it off-screen.
@@ -109,7 +111,7 @@ export default defineArtwork({
       } else {
         place = ([x, y]) => [x * s - ctx.margin, y * s - ctx.margin];
       }
-      ctx.status(`${v.file.name}: ${(maxX - minX).toFixed(0)}×${(maxY - minY).toFixed(0)} mm original${skipped ? `, ${skipped} skipped` : ''}`);
+      ctx.status(`${file.name}: ${(maxX - minX).toFixed(0)}×${(maxY - minY).toFixed(0)} mm original${skipped ? `, ${skipped} skipped` : ''}`);
       return [...groups.entries()].map(([name, g], i): Layer => ({
         name: v.layers === 'color' ? `Colour ${i + 1}` : name,
         color: g.color || PALETTE[i % PALETTE.length],

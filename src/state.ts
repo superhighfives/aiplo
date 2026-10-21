@@ -1,6 +1,7 @@
 import type { Artwork } from './art/types';
 import type { ParamDef, Values } from './params';
 import { withDefaults } from './params';
+import { FONT_OPTIONS } from './lib/hershey';
 
 export const MACHINES: Record<string, [string, number, number]> = {
   v3: ['AxiDraw V3 / SE/A4 (300×218)', 300, 218],
@@ -37,6 +38,7 @@ export const postDefs: ParamDef[] = [
   { type: 'number', key: 'mergeTol', label: 'Join gaps under (mm)', min: 0, max: 2, step: 0.05, default: 0.3, show: (v) => v.optimize, hint: 'Draws across small gaps instead of lifting the pen, but only where the line carries straight on' },
   { type: 'number', key: 'penWidth', label: 'Preview pen width (mm)', min: 0.05, max: 2, step: 0.05, default: 0.35 },
   { type: 'checkbox', key: 'showTravel', label: 'Show pen-up travel', default: false },
+  { type: 'checkbox', key: 'showDensity', label: 'Show ink density', default: false, hint: 'Highlights areas so dense the ink may bleed or tear the paper' },
 ];
 
 export const plotDefs: ParamDef[] = [
@@ -50,6 +52,23 @@ export const plotDefs: ParamDef[] = [
   { type: 'number', key: 'penDownDelay', label: 'Pen down delay (ms)', min: 0, max: 1000, step: 10, default: 150 },
 ];
 
+const on = (v: Values) => v.on;
+export const captionDefs: ParamDef[] = [
+  { type: 'checkbox', key: 'on', label: 'Add caption', default: false },
+  { type: 'text', key: 'left', label: 'Left', default: '{title} · {place}', show: on, hint: 'Tokens: {title} {place} {coords} {date} {edition}' },
+  { type: 'text', key: 'right', label: 'Right', default: '{edition}', show: on, hint: 'Tokens: {title} {place} {coords} {date} {edition}' },
+  { type: 'number', key: 'edition', label: 'Edition number', min: 1, max: 500, step: 1, default: 1, show: on },
+  { type: 'number', key: 'of', label: 'Edition size', min: 0, max: 500, step: 1, default: 0, show: on, hint: '0 = no edition number' },
+  { type: 'number', key: 'size', label: 'Size (mm)', min: 1.5, max: 10, step: 0.5, default: 3, show: on },
+  { type: 'select', key: 'font', label: 'Font', options: FONT_OPTIONS, default: 'futural', show: on },
+  { type: 'checkbox', key: 'sign', label: 'Signature', default: false, show: on },
+  { type: 'checkbox', key: 'ownPen', label: 'Caption on its own pen', default: false, show: on },
+];
+
+export const signatureDefs: ParamDef[] = [
+  { type: 'sketchpad', key: 'signature', label: 'Your signature (shared by all pieces)', aspect: 3, default: [] },
+];
+
 export interface State {
   /** Knob values per piece slug. */
   gen: Record<string, Values>;
@@ -59,6 +78,9 @@ export interface State {
   plot: Values;
   /** Layer names hidden from preview, export and plotting, per piece slug. */
   hidden: Record<string, string[]>;
+  /** Caption settings per piece slug. */
+  caption: Record<string, Values>;
+  signature: Values;
 }
 
 const STORAGE_KEY = 'aiplo:v2';
@@ -79,6 +101,8 @@ function loadState(): State {
     post: withDefaults(postDefs, saved.post),
     plot: withDefaults(plotDefs, saved.plot),
     hidden: obj(saved.hidden),
+    caption: obj(saved.caption),
+    signature: withDefaults(signatureDefs, saved.signature),
   };
 }
 
@@ -112,6 +136,7 @@ export const pieceValues = (a: Artwork): Values => ensure(state.gen, a.slug, wit
 
 export const paperDefaults = (a: Artwork): Values => withDefaults(paperDefs, { ...a.paper });
 export const piecePaper = (a: Artwork): Values => ensure(state.paper, a.slug, paperDefaults(a));
+export const pieceCaption = (a: Artwork): Values => ensure(state.caption, a.slug, withDefaults(captionDefs, {}));
 
 /** Resets a values object to `defaults` in place, keeping its identity (the knob UI holds it). */
 export function resetInPlace(target: Values, defaults: Values) {

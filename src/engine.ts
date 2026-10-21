@@ -1,4 +1,4 @@
-import type { Layer, LayerStats, ProcessOptions } from './layers';
+import type { Density, Layer, LayerStats, ProcessOptions } from './layers';
 import type { GenRequest, WorkerRequest, WorkerResponse } from './worker';
 
 type Unsent<T> = T extends unknown ? Omit<T, 'id'> : never;
@@ -10,7 +10,7 @@ export interface EngineHooks {
   mainGenerate: () => Promise<{ layers: Layer[]; info: string; ms: number }>;
   processOptions: () => ProcessOptions;
   onStatus: (msg: string, error?: boolean) => void;
-  onProcessed: (layers: Layer[], stats: LayerStats[]) => void;
+  onProcessed: (layers: Layer[], stats: LayerStats[], density: Density) => void;
 }
 
 export const createWorker = () => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
@@ -100,7 +100,7 @@ export class Engine {
         this.needProc = false;
         const r = await this.send({ type: 'process', opts: this.hooks.processOptions() });
         if (r.type === 'processed') {
-          this.hooks.onProcessed(r.result.layers, r.result.stats);
+          this.hooks.onProcessed(r.result.layers, r.result.stats, r.result.density);
           if (!this.needGen) this.hooks.onStatus(this.genInfo);
         } else if (r.type === 'error') this.hooks.onStatus(r.message, true);
       }

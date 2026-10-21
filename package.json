@@ -9,11 +9,16 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/d3-delaunay": "^6.0.4",
+    "@types/pngjs": "^6.0.5",
     "@types/w3c-web-serial": "^1.0.8",
+    "pngjs": "^7.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.4"
   },
   "dependencies": {
+    "chess.js": "^1.4.0",
+    "d3-delaunay": "^6.0.4",
     "simplex-noise": "^4.0.3"
   }
 }

@@ -3,7 +3,7 @@ import { PALETTE, type GenOutput } from '../layers';
 import type { Location, ParamDef, Values } from '../params';
 import { shuffle, type Rng } from '../random';
 import { jitteredGrid, streamlines } from './streamlines';
-import { boxBlur, loadTerrain, makeSampler, type Terrain } from './terrain';
+import { boxBlur, loadTerrain, makeSampler, SEA_LEVEL, type Terrain } from './terrain';
 
 /** Normalised height in [0, 1] at u, v in [0, 1] across the drawing area. */
 export type HeightFn = (u: number, v: number) => number;
@@ -180,10 +180,10 @@ export function contours(h: HeightFn, W: number, H: number, o: ContourOptions): 
   ];
 }
 
-/** The coastline (0 m), traced from real elevation. Empty if the area has no sea. */
+/** The coastline (sea level, see `SEA_LEVEL`), traced from real elevation. Empty if the area has no sea. */
 export function coastline(map: HeightMap, W: number, H: number, cell = 0.5): Polyline[] {
-  if (map.min > 0) return [];
-  return contourLevels(map.metres, W, H, [0], cell)[0];
+  if (map.min > SEA_LEVEL) return [];
+  return contourLevels(map.metres, W, H, [SEA_LEVEL], cell)[0];
 }
 
 /**

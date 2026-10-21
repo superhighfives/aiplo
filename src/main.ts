@@ -4,11 +4,11 @@ import { Engine } from './engine';
 import { findArtwork } from './art';
 import type { Artwork } from './art/types';
 import { renderGallery } from './gallery';
-import { toLayers, translateLayers, type Layer, type LayerStats } from './layers';
+import { toLayers, translateLayers, type CaptionSpec, type Density, type Layer, type LayerStats } from './layers';
 import { defaultsOf, renderParams } from './params';
 import { Plotter, type PlotSettings } from './plotter/plotter';
 import { mulberry32 } from './random';
-import { MACHINES, paperDefaults, paperDefs, paperSize as sizeOf, piecePaper, pieceValues, plotDefs, postDefs, resetInPlace, save, state } from './state';
+import { captionDefs, MACHINES, paperDefaults, paperDefs, paperSize as sizeOf, pieceCaption, piecePaper, pieceValues, plotDefs, postDefs, resetInPlace, save, signatureDefs, state } from './state';
 import { pathData, toSVG } from './svg';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -23,6 +23,41 @@ const hiddenLayers = () => state.hidden[piece?.slug ?? ''] ?? [];
 
 let layers: Layer[] = [];
 let layerStats: LayerStats[] = [];
+let density: Density | null = null;
+
+/** Resolves the caption tokens for the open piece, or undefined if captions are off. */
+function captionSpec(): CaptionSpec | undefined {
+  if (!piece) return undefined;
+  const c = pieceCaption(piece);
+  if (!c.on) return undefined;
+  const v = pieceValues(piece);
+  const loc = v.loc as { name: string; lat: number; lon: number } | undefined;
+  const place = piece.caption?.(v) ?? (loc ? loc.name.split(',').slice(0, 2).join(',').trim() : '');
+  const coords = loc ? `${Math.abs(loc.lat).toFixed(2)}°${loc.lat >= 0 ? 'N' : 'S'} ${Math.abs(loc.lon).toFixed(2)}°${loc.lon >= 0 ? 'E' : 'W'}` : '';
+  const tokens: Record<string, string> = {
+    title: piece.title,
+    place,
+    coords,
+    date: new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }),
+    edition: c.of > 0 ? `${c.edition}/${c.of}` : '',
+  };
+  // Fill tokens, then drop separators left dangling by empty ones.
+  const fill = (t: string) =>
+    t
+      .replace(/\{(\w+)\}/g, (_, k) => tokens[k] ?? '')
+      .split('·')
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .join(' · ');
+  return {
+    left: fill(c.left),
+    right: fill(c.right),
+    size: c.size,
+    font: c.font,
+    signature: c.sign ? state.signature.signature : [],
+    ownPen: c.ownPen,
+  };
+}
 const visible = () => layers.filter((l) => !hiddenLayers().includes(l.name) && l.paths.length);
 
 const setStatus = (msg: string, error = false) => {
@@ -63,12 +98,15 @@ const engine = new Engine({
     optimize: state.post.optimize,
     mergeTol: state.post.mergeTol,
     plot: settings(),
+    penWidth: state.post.penWidth,
+    caption: captionSpec(),
   }),
   onStatus: setStatus,
-  onProcessed(l, st) {
+  onProcessed(l, st, d) {
     if (!piece) return;
     layers = l;
     layerStats = st;
+    density = d;
     render();
   },
 });
@@ -111,6 +149,10 @@ function render() {
     }
     add('path', { class: 'ink', d: pathData(l.paths), stroke: l.color, 'stroke-width': state.post.penWidth });
   }
+  if (state.post.showDensity && density) {
+    for (const [x, y, cov] of density.hot)
+      add('rect', { class: 'density', x, y, width: density.cell, height: density.cell, 'fill-opacity': Math.min(0.6, (cov - 0.5) * 0.6).toFixed(2) });
+  }
   marker.setAttribute('r', '2');
   marker.setAttribute('class', 'marker');
   svg.append(marker);
@@ -118,7 +160,8 @@ function render() {
   const shown = layerStats.filter((_, i) => !hiddenLayers().includes(layers[i].name));
   const sum = (k: keyof LayerStats) => shown.reduce((t, s) => t + s[k], 0);
   const pens = visible().length;
-  const warn = fit === 'nofit' ? ' · ⚠ paper larger than machine travel' : fit === 'rotate' ? ' · plots rotated 90°' : '';
+  let warn = fit === 'nofit' ? ' · ⚠ paper larger than machine travel' : fit === 'rotate' ? ' · plots rotated 90°' : '';
+  if (density && density.saturated > 0.02) warn += ` · ⚠ ${Math.round(density.saturated * 100)}% of the inked area is saturated: may bleed or tear`;
   $('stats').textContent =
     `${sum('count')} strokes · ${(sum('draw') / 1000).toFixed(1)} m ink · ${(sum('travel') / 1000).toFixed(1)} m travel · ` +
     `~${fmtTime(sum('time'))}${pens > 1 ? ` · ${pens} pens` : ''}${warn}`;
@@ -326,9 +369,11 @@ function openPiece(a: Artwork) {
   $('piece-desc').textContent = a.description ?? '';
   mountKnobs();
   mountPaper();
+  mountCaption();
   if (switching) {
     layers = [];
     layerStats = [];
+    density = null;
     render();
   }
   $('gallery').hidden = true;
@@ -361,10 +406,23 @@ const mountPaper = () =>
     save();
     scheduleRegen();
   });
+const mountCaption = () => {
+  const c = pieceCaption(piece!);
+  renderParams($('caption-params'), captionDefs, c, (key) => {
+    save();
+    if (key === 'on' || key === 'sign') $('signature-params').hidden = !(c.on && c.sign);
+    engine.process();
+  });
+  renderParams($('signature-params'), signatureDefs, state.signature, () => {
+    save();
+    engine.process();
+  });
+  $('signature-params').hidden = !(c.on && c.sign);
+};
 const mountPost = () =>
   renderParams($('post-params'), postDefs, state.post, (key) => {
     save();
-    if (key === 'penWidth' || key === 'showTravel') render();
+    if (key === 'showTravel' || key === 'showDensity') render();
     else engine.process();
   });
 const mountPlot = () =>
@@ -384,6 +442,11 @@ $('reset-paper').addEventListener('click', () => {
   resetInPlace(piecePaper(piece!), paperDefaults(piece!));
   mountPaper();
   regenerate();
+});
+$('reset-caption').addEventListener('click', () => {
+  resetInPlace(pieceCaption(piece!), captionDefs.reduce((o, d) => ({ ...o, [d.key]: d.default }), {}));
+  mountCaption();
+  engine.process();
 });
 $('reset-post').addEventListener('click', () => {
   resetInPlace(state.post, defaultsOf(postDefs));

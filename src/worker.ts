@@ -18,7 +18,9 @@ export type WorkerRequest =
   | { type: 'setRaw'; id: number; layers: Layer[] }
   | { type: 'process'; id: number; opts: ProcessOptions }
   /** Generate + process in one go without touching the editor's state (gallery thumbnails). */
-  | ({ type: 'render'; id: number; opts: ProcessOptions } & GenRequest);
+  | ({ type: 'render'; id: number; opts: ProcessOptions } & GenRequest)
+  /** Process already-generated layers (thumbnails of main-thread pieces). */
+  | { type: 'processRaw'; id: number; layers: Layer[]; opts: ProcessOptions };
 
 export type WorkerResponse =
   | { type: 'status'; id: number; msg: string }
@@ -53,6 +55,8 @@ onmessage = async (e: MessageEvent<WorkerRequest>) => {
       post({ type: 'done', id: m.id });
     } else if (m.type === 'process') {
       post({ type: 'processed', id: m.id, result: processLayers(raw, m.opts) });
+    } else if (m.type === 'processRaw') {
+      post({ type: 'processed', id: m.id, result: processLayers(m.layers, m.opts) });
     } else {
       const layers = await runGenerate(m, () => {});
       post({ type: 'processed', id: m.id, result: processLayers(layers, m.opts) });

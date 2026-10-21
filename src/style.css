@@ -99,3 +99,13 @@ code { font: 12px ui-monospace, Menlo, monospace; background: #26282d; padding: 
 .thumb-label.error { color: #b5452d; font-size: 12px; }
 .card-title { font-weight: 600; }
 .card-desc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+.param-text input, .param-text textarea, .param-date input, .param-places > *, .param-sketchpad > * { grid-column: 1 / -1; }
+.param-places textarea { width: 100%; font: 12px/1.4 ui-monospace, Menlo, monospace; padding: 6px; }
+.file-row { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+.file-list { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.mini { font-size: 11px; padding: 1px 8px; }
+.sketchpad { width: 100%; background: var(--paper); border-radius: 4px; touch-action: none; cursor: crosshair; }
+.density { fill: #ff3b30; }
+#gallery h3 { font-size: 13px; font-weight: 600; color: var(--text); margin: 28px 0 12px; }
+#gallery section > h2 + h3 { margin-top: 12px; }

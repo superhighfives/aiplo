@@ -113,6 +113,9 @@ export function boxBlur(t: Terrain, r: number): Terrain {
  * Sampler over the largest centred crop matching `aspect` (w/h).
  * Returns normalised height in [0, 1] for u, v in [0, 1].
  */
+/** Elevation (m) treated as sea level. Tiles often store the sea as slightly above 0 m. */
+export const SEA_LEVEL = 0.5;
+
 export function makeSampler(t: Terrain, aspect: number, clampSea: boolean) {
   const cw = aspect >= 1 ? t.w : t.h * aspect;
   const ch = aspect >= 1 ? t.w / aspect : t.h;
@@ -138,8 +141,8 @@ export function makeSampler(t: Terrain, aspect: number, clampSea: boolean) {
   const range = max - min || 1;
   return {
     height: (u: number, v: number) => (raw(u, v) - min) / range,
-    /** True at or below sea level. */
-    isSea: (u: number, v: number) => metres(u, v) <= 0,
+    /** True at or below sea level (with a little slack: many tiles store open sea as ~0 m). */
+    isSea: (u: number, v: number) => metres(u, v) <= SEA_LEVEL,
     /** Unflattened elevation in metres. */
     metres,
     min,
