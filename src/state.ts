@@ -23,7 +23,7 @@ export const PAPERS: Record<string, [string, number, number]> = {
 export const paperDefs: ParamDef[] = [
   { type: 'select', key: 'machine', label: 'Machine', options: Object.entries(MACHINES).map(([k, v]) => [k, v[0]]), default: 'v3' },
   { type: 'select', key: 'paper', label: 'Paper', options: Object.entries(PAPERS).map(([k, v]) => [k, v[0]]), default: 'letter' },
-  { type: 'select', key: 'orientation', label: 'Orientation', options: [['landscape', 'Landscape'], ['portrait', 'Portrait'], ['landscape-180', 'Landscape, rotated 180°'], ['portrait-180', 'Portrait, rotated 180°']], default: 'landscape', hint: 'Rotated 180° plots the drawing upside down, for paper loaded the other way round. The preview stays upright' },
+  { type: 'select', key: 'orientation', label: 'Orientation', options: [['landscape', 'Landscape'], ['portrait', 'Portrait'], ['landscape-180', 'Landscape, rotated 180°'], ['portrait-180', 'Portrait, rotated 180°']], default: 'landscape', hint: 'Rotated 180° turns the drawing upside down on the paper (shown in the preview), for paper loaded the other way round' },
   { type: 'number', key: 'w', label: 'Width (mm)', min: 20, max: 600, step: 0.1, default: 200, show: (v) => v.paper === 'custom' },
   { type: 'number', key: 'h', label: 'Height (mm)', min: 20, max: 600, step: 0.1, default: 150, show: (v) => v.paper === 'custom' },
   { type: 'number', key: 'margin', label: 'Margin (mm)', min: 0, max: 60, step: 0.5, default: 15 },

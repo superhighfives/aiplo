@@ -139,10 +139,11 @@ function render() {
   const vw = Math.max(pw, mw), vh = Math.max(ph, mh);
   svg.setAttribute('viewBox', `${-pad} ${-pad} ${vw + pad * 2} ${vh + pad * 2}`);
   svg.replaceChildren();
+  let parent: Element = svg;
   const add = (tag: string, attrs: Record<string, string | number>) => {
     const e = document.createElementNS(SVGNS, tag);
     for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
-    svg.append(e);
+    parent.append(e);
     return e;
   };
   const fit = plotTransform();
@@ -150,6 +151,8 @@ function render() {
   add('rect', { class: 'machine', x: 0, y: 0, ...mRect });
   add('rect', { class: 'paper', x: 0, y: 0, width: pw, height: ph });
   add('rect', { class: 'margin', x: m, y: m, width: Math.max(0, pw - 2 * m), height: Math.max(0, ph - 2 * m) });
+  // A "rotated 180°" orientation shows the drawing as it will land on the paper: upside down.
+  parent = add('g', flipped() ? { transform: `rotate(180 ${pw / 2} ${ph / 2})` } : {});
   // Timeline: ink before the start point is drawn faded.
   const targets = plotPens();
   // Pens that aren't being plotted are shown faintly for context.
@@ -159,7 +162,8 @@ function render() {
   for (const l of timeline?.after ?? targets) {
     if (state.post.showTravel) {
       const travel: Polyline[] = [];
-      let cur: Pt = [0, 0];
+      // Travel starts from the machine's home corner, which is the drawing's far corner when rotated.
+      let cur: Pt = flipped() ? [pw, ph] : [0, 0];
       for (const p of l.paths) {
         travel.push([cur, p[0]]);
         cur = p[p.length - 1];
@@ -172,6 +176,7 @@ function render() {
     for (const [x, y, cov] of density.hot)
       add('rect', { class: 'density', x, y, width: density.cell, height: density.cell, 'fill-opacity': Math.min(0.6, (cov - 0.5) * 0.6).toFixed(2) });
   }
+  parent = svg;
   marker.setAttribute('r', '2');
   marker.setAttribute('class', 'marker');
   svg.append(marker);
@@ -179,8 +184,8 @@ function render() {
   const shown = layerStats.filter((_, i) => !hiddenLayers().includes(layers[i].name));
   const sum = (k: keyof LayerStats) => shown.reduce((t, s) => t + s[k], 0);
   const pens = visible().length;
-  const turn = (fit === 'rotate' ? 90 : 0) + (flipped() ? 180 : 0);
-  let warn = fit === 'nofit' ? ' · ⚠ paper larger than machine travel' : turn ? ` · plots rotated ${turn}°` : '';
+  let warn = fit === 'nofit' ? ' · ⚠ paper larger than machine travel' : fit === 'rotate' ? ' · plots rotated 90°' : '';
+  if (flipped()) warn += ' · upside down';
   if (density && density.saturated > 0.02) warn += ` · ⚠ ${Math.round(density.saturated * 100)}% of the inked area is saturated: may bleed or tear`;
   $('stats').textContent =
     `${sum('count')} strokes · ${(sum('draw') / 1000).toFixed(1)} m ink · ${(sum('travel') / 1000).toFixed(1)} m travel · ` +
@@ -255,12 +260,10 @@ function machinePaths(paths: Polyline[]): Polyline[] {
   return out;
 }
 
-/** Inverse of machinePaths for a single point: where the pen is, in upright preview coordinates. */
+/** Where the pen is on the preview's paper. The preview already shows any 180° rotation, so only the 90° turn is undone. */
 function machineToPreview([x, y]: Pt): Pt {
-  const [pw, ph] = paperSize();
-  let p: Pt = plotTransform() === 'rotate' ? [pw - y, x] : [x, y];
-  if (flipped()) p = [pw - p[0], ph - p[1]];
-  return p;
+  const [pw] = paperSize();
+  return plotTransform() === 'rotate' ? [pw - y, x] : [x, y];
 }
 
 const plotter = new Plotter();
