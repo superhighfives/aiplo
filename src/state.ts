@@ -83,6 +83,8 @@ export interface State {
   /** Caption settings per piece slug. */
   caption: Record<string, Values>;
   signature: Values;
+  /** Per piece, per pen: [dx, dy] mm added at plot time to correct a pen that sits off-centre. */
+  nudge: Record<string, Record<string, [number, number]>>;
 }
 
 const STORAGE_KEY = 'aiplo:v2';
@@ -105,6 +107,7 @@ function loadState(): State {
     hidden: obj(saved.hidden),
     caption: obj(saved.caption),
     signature: withDefaults(signatureDefs, saved.signature),
+    nudge: obj(saved.nudge),
   };
 }
 

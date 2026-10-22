@@ -80,6 +80,7 @@ export class Plotter {
     this.ebb = await EBB.connect();
     this.version = await this.ebb.query('V');
     this.sx = this.sy = 0;
+    this.motorsEnabled = false;
     return this.version;
   }
 
@@ -103,12 +104,17 @@ export class Plotter {
     await this.e.command(`SP,0,${liftTime(s, false)}`);
     this.penIsDown = true;
   }
+  /** Whether we've enabled the motors since connecting (re-sending EM re-initialises the drivers). */
+  private motorsEnabled = false;
   async motorsOn() {
+    if (this.motorsEnabled) return;
     await this.e.command('EM,1,1');
+    this.motorsEnabled = true;
   }
   async motorsOff() {
     await this.e.waitIdle();
     await this.e.command('EM,0,0');
+    this.motorsEnabled = false;
     // Position is unknown once the carriage can be pushed by hand.
     this.sx = this.sy = 0;
   }

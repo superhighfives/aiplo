@@ -135,3 +135,6 @@ button.mini { font-size: 11px; padding: 1px 8px; }
 .ink.other { opacity: 0.12; }
 .pen-pick { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--muted); font-size: 12px; }
 #plot-pen { flex: 1; min-width: 0; }
+.layer-row { display: flex; flex-direction: column; gap: 2px; }
+.nudge { display: flex; align-items: center; gap: 4px; margin-left: 24px; font-size: 11px; }
+.nudge input { width: 52px; padding: 1px 4px; font-size: 11px; }

@@ -207,13 +207,45 @@ function updatePenPicker() {
   $('pen-pick').hidden = v.length < 2;
 }
 
+/** Two small inputs (right / down, mm) to correct a pen that lands off-registration. */
+function nudgeControls(pen: string) {
+  const wrap = document.createElement('div');
+  wrap.className = 'nudge';
+  wrap.title = 'If this pen lands off from the others, shift it here (mm, + is right/down). Measure with the Calibration registration marks.';
+  const label = document.createElement('span');
+  label.className = 'muted';
+  label.textContent = 'Nudge';
+  wrap.append(label);
+  (['→', '↓'] as const).forEach((arrow, axis) => {
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = '0.1';
+    input.value = String(nudgeOf(pen)[axis]);
+    input.setAttribute('aria-label', `Nudge ${pen} ${axis ? 'down' : 'right'} (mm)`);
+    input.addEventListener('change', () => {
+      const v = Number(input.value) || 0;
+      const map = (state.nudge[piece!.slug] ??= {});
+      const cur = map[pen] ?? [0, 0];
+      map[pen] = axis ? [cur[0], v] : [v, cur[1]];
+      save();
+    });
+    const a = document.createElement('span');
+    a.className = 'muted';
+    a.textContent = arrow;
+    wrap.append(a, input);
+  });
+  return wrap;
+}
+
 function renderLayerList() {
   updatePenPicker();
   const root = $('layers');
   root.replaceChildren();
   layers.forEach((l, i) => {
-    const row = document.createElement('label');
-    row.className = 'layer';
+    const row = document.createElement('div');
+    row.className = 'layer-row';
+    const main = document.createElement('label');
+    main.className = 'layer';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = !hiddenLayers().includes(l.name);
@@ -232,7 +264,9 @@ function renderLayerList() {
     meta.className = 'muted';
     const st = layerStats[i];
     meta.textContent = st ? `${st.count} · ${(st.draw / 1000).toFixed(1)} m · ${fmtTime(st.time)}` : '';
-    row.append(cb, sw, name, meta);
+    main.append(cb, sw, name, meta);
+    row.append(main);
+    if (layers.length > 1) row.append(nudgeControls(l.name));
     root.append(row);
   });
 }
@@ -251,10 +285,16 @@ function plotTransform(): 'none' | 'rotate' | 'nofit' {
 /** Paper set to a "rotated 180°" orientation: plot the drawing upside down on the page. */
 const flipped = () => String(paperValues().orientation).endsWith('-180');
 
-function machinePaths(paths: Polyline[]): Polyline[] {
+/** The plot-time correction for a pen, in mm as seen on the paper (right, down). */
+const nudgeOf = (pen: string): [number, number] => state.nudge[piece?.slug ?? '']?.[pen] ?? [0, 0];
+
+function machinePaths(paths: Polyline[], nudge: [number, number] = [0, 0]): Polyline[] {
   const [pw, ph] = paperSize();
   let out = paths;
   if (flipped()) out = out.map((p) => p.map(([x, y]) => [pw - x, ph - y] as Pt));
+  // Shift this pen to cancel out where it physically sits in the holder.
+  const [nx, ny] = nudge;
+  if (nx || ny) out = out.map((p) => p.map(([x, y]) => [x + nx, y + ny] as Pt));
   // Rotate so the paper's left edge runs along the machine's top (x) axis.
   if (plotTransform() === 'rotate') out = out.map((p) => p.map(([x, y]) => [y, pw - x] as Pt));
   return out;
@@ -351,7 +391,7 @@ $('plot').addEventListener('click', () => {
         if (stopped) break;
       } else if (startAt > 0) plotStatus(`Starting at ${(startAt * 100).toFixed(1)}% with “${l.name}”.`);
       const ink = inkOf(l);
-      await plotter.plot(machinePaths(l.paths), settings(), {
+      await plotter.plot(machinePaths(l.paths, nudgeOf(l.name)), settings(), {
         onProgress: (f, pos) => {
           reached = total ? (done + f * ink) / total : 1;
           saveProgress(reached);
