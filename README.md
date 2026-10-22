@@ -13,6 +13,7 @@ Plotting needs Chrome or Edge (WebSerial). Everything else works in any modern b
 **Highlights**
 
 - **Many pieces:** 67 artworks across terrain, maps, sky, music, photos, words and generative classics, each a short script with knobs.
+- **Instant defaults:** every piece's default data ships with the app, so you can click around the gallery without waiting on (or hammering) map servers.
 - **Resumable plots:** they pick up exactly where they stopped, after a pause, a stop, a reload or a crash. Or drag the timeline to start anywhere.
 - **Pen control:** plot all pens in order with swap prompts, or choose exactly which pen goes next.
 - **Pen lifts:** the app sets the servo's speed and waits exactly as long as each lift takes.
@@ -160,6 +161,7 @@ export default defineArtwork({
 - **Knob types:** `number`, `select`, `checkbox`, `seed` (feeds `ctx.rng`), `location` (place search), `places` (a geocoded list), `text`, `date` (optionally with time), `file` (stored in IndexedDB; read with `loadFiles`), `sketchpad` (draw in the browser) and `code`. Each piece remembers its own knob values, paper and caption, and each settings group has a Reset.
 - **Defaults must render:** a piece should draw something with no input (demo image, demo song, a default place) so its gallery thumbnail works. Aim for default plots of roughly 3–25 minutes with little or no saturation.
 - **Series:** `kind` is `'art'` (default), `'study'` or `'tool'`. Artworks are grouped by `order` range (1–9 Terrain, 10–19 Streets and water, 20–29 World, 30–39 Sky and time, 40–49 Sound and personal, 50–59 Photographs, 60+ Generative) unless they set `series` (e.g. Moments, Music, Words and hands). Gallery badges come from the knobs.
+- **Bundled data:** after adding a piece or changing its defaults, run `npm run record-data <slug>` to record the data its defaults fetch into `public/data/`, then commit it.
 - **DOM access:** pieces that need the DOM (SVG layout, audio decoding) set `mainThread: true`. Everything else runs in a Web Worker.
 
 ### Building blocks in `src/lib/`
@@ -194,7 +196,9 @@ export default defineArtwork({
 
 ## Data and credits
 
-Data comes from free, keyless services, fetched in the browser and cached in memory:
+Each piece's default data is **bundled** in `public/data/`, so defaults and gallery thumbnails load instantly, even offline or when a service is down. When you change a place or date, data comes from free, keyless services, fetched in the browser. OpenStreetMap results are kept in your browser for 30 days, so a place is only fetched once.
+
+Sources:
 
 - **Elevation:** [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen terrarium encoding).
 - **Places:** [OpenStreetMap](https://www.openstreetmap.org/copyright) via Overpass (© OpenStreetMap contributors, ODbL); place search via Nominatim.

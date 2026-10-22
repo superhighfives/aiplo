@@ -1,4 +1,5 @@
 import './style.css';
+import { installBundledData } from './lib/netcache';
 import type { Polyline, Pt } from './geom';
 import { Engine } from './engine';
 import { findArtwork } from './art';
@@ -11,6 +12,9 @@ import { mulberry32, seedFromText } from './random';
 import { captionDefs, MACHINES, paperDefaults, paperDefs, paperSize as sizeOf, pieceCaption, piecePaper, pieceValues, plotDefs, postDefs, resetInPlace, save, signatureDefs, state } from './state';
 import { pathData, toSVG } from './svg';
 import { inkOf, splitAt } from './timeline';
+
+// Answer recorded requests for default knobs from public/data/ (see scripts/record-data.ts).
+installBundledData(import.meta.env.BASE_URL);
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -175,7 +179,8 @@ function render() {
   const shown = layerStats.filter((_, i) => !hiddenLayers().includes(layers[i].name));
   const sum = (k: keyof LayerStats) => shown.reduce((t, s) => t + s[k], 0);
   const pens = visible().length;
-  let warn = fit === 'nofit' ? ' · ⚠ paper larger than machine travel' : fit === 'rotate' ? ' · plots rotated 90°' : '';
+  const turn = (fit === 'rotate' ? 90 : 0) + (flipped() ? 180 : 0);
+  let warn = fit === 'nofit' ? ' · ⚠ paper larger than machine travel' : turn ? ` · plots rotated ${turn}°` : '';
   if (density && density.saturated > 0.02) warn += ` · ⚠ ${Math.round(density.saturated * 100)}% of the inked area is saturated: may bleed or tear`;
   $('stats').textContent =
     `${sum('count')} strokes · ${(sum('draw') / 1000).toFixed(1)} m ink · ${(sum('travel') / 1000).toFixed(1)} m travel · ` +
@@ -238,11 +243,24 @@ function plotTransform(): 'none' | 'rotate' | 'nofit' {
   return 'nofit';
 }
 
+/** Paper set to a "rotated 180°" orientation: plot the drawing upside down on the page. */
+const flipped = () => String(paperValues().orientation).endsWith('-180');
+
 function machinePaths(paths: Polyline[]): Polyline[] {
-  const [pw] = paperSize();
+  const [pw, ph] = paperSize();
+  let out = paths;
+  if (flipped()) out = out.map((p) => p.map(([x, y]) => [pw - x, ph - y] as Pt));
   // Rotate so the paper's left edge runs along the machine's top (x) axis.
-  if (plotTransform() === 'rotate') return paths.map((p) => p.map(([x, y]) => [y, pw - x] as Pt));
-  return paths;
+  if (plotTransform() === 'rotate') out = out.map((p) => p.map(([x, y]) => [y, pw - x] as Pt));
+  return out;
+}
+
+/** Inverse of machinePaths for a single point: where the pen is, in upright preview coordinates. */
+function machineToPreview([x, y]: Pt): Pt {
+  const [pw, ph] = paperSize();
+  let p: Pt = plotTransform() === 'rotate' ? [pw - y, x] : [x, y];
+  if (flipped()) p = [pw - p[0], ph - p[1]];
+  return p;
 }
 
 const plotter = new Plotter();
@@ -314,7 +332,7 @@ $('plot').addEventListener('click', () => {
   const pens = after.filter((l) => l.paths.length);
   if (!pens.length) return plotStatus('Nothing to plot from here. Drag the timeline back or press From start.');
   paused = stopped = false;
-  const toPreview = plotTransform() === 'rotate' ? ([x, y]: Pt): Pt => [paperSize()[0] - y, x] : (p: Pt) => p;
+  const toPreview = machineToPreview;
   const t0 = performance.now();
   let reached = startAt;
   const job = (async () => {

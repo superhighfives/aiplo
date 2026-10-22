@@ -4,16 +4,22 @@ import type { Location, ParamDef } from '../params';
 /**
  * OpenStreetMap via Overpass.
  *
- * - `overpass(query)` POSTs `data=[out:json][timeout:…];<query>` and retries with exponential
- *   backoff on 429/5xx/406 and network errors, alternating between the main endpoint and the
- *   mail.ru mirror. Results are cached in memory by query, so knob tweaks don't refetch.
+ * - `overpass(query)` POSTs `data=[out:json][timeout:…];<query>`. It is deliberately gentle,
+ *   because Overpass blocks addresses that make too many requests:
+ *   - results are cached in memory and in IndexedDB for 30 days, so a place is fetched once,
+ *     not on every knob tweak, thumbnail or reload;
+ *   - only one request runs at a time per worker, and identical requests share one fetch;
+ *   - a server that refuses or rate-limits us is skipped for a while (it's remembered),
+ *     so retries go to the server that's actually answering, honouring Retry-After.
  * - `fetchWays(filters, loc, radius)` returns ways (with `out geom` geometry) matching tag filters.
  * - `projection(loc, radius, W, H)` maps lon/lat → mm (see the comment there for the scale rule).
  */
 
 const ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+const NAMES: Record<string, string> = { [ENDPOINTS[0]]: 'the main server', [ENDPOINTS[1]]: 'the mirror' };
 const RETRY_STATUS = new Set([406, 429, 500, 502, 503, 504]);
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 6;
+const CACHE_DAYS = 30;
 
 export interface OsmWay {
   type: 'way';
@@ -39,53 +45,136 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Node's fetch sends a UA that overpass-api.de rejects (406). Browsers send their own and forbid overriding it.
 const isNode = !!(globalThis as any).process?.versions?.node && typeof (globalThis as any).WorkerGlobalScope === 'undefined';
 
+// ---------- persistent cache (IndexedDB; silently skipped where unavailable, e.g. Node) ----------
+
+function idb(): Promise<IDBDatabase | null> {
+  if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const req = indexedDB.open('aiplo-cache', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('overpass');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function cacheGet(key: string): Promise<Element[] | null> {
+  const db = await idb();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    const req = db.transaction('overpass').objectStore('overpass').get(key);
+    req.onsuccess = () => {
+      const v = req.result as { at: number; elements: Element[] } | undefined;
+      resolve(v && Date.now() - v.at < CACHE_DAYS * 864e5 ? v.elements : null);
+    };
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function cachePut(key: string, elements: Element[]) {
+  const db = await idb();
+  if (!db) return;
+  try {
+    db.transaction('overpass', 'readwrite').objectStore('overpass').put({ at: Date.now(), elements }, key);
+  } catch {
+    /* quota or similar: just don't cache */
+  }
+}
+
+// ---------- server health ----------
+
+/** Endpoint → time (ms) until which we leave it alone. */
+const downUntil = new Map<string, number>();
+const why = new Map<string, string>();
+
+function markDown(url: string, ms: number, reason: string) {
+  downUntil.set(url, Math.max(downUntil.get(url) ?? 0, Date.now() + ms));
+  why.set(url, reason);
+}
+
+/** Endpoints to try: healthy ones first (in preference order), then whichever recovers soonest. */
+function ranked(): string[] {
+  const now = Date.now();
+  const ready = (u: string) => Math.max(now, downUntil.get(u) ?? 0);
+  return [...ENDPOINTS].sort((a, b) => ready(a) - ready(b));
+}
+
+// One request at a time: Overpass allows only a couple of concurrent requests per address.
+let queue: Promise<unknown> = Promise.resolve();
+function serial<T>(job: () => Promise<T>): Promise<T> {
+  const run = queue.then(job, job);
+  queue = run.catch(() => {});
+  return run;
+}
+
 async function attempt(url: string, body: string, timeoutMs: number): Promise<Element[]> {
   const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
   if (isNode) headers['User-Agent'] = 'aiplo (pen-plotter sketchbook)';
   const res = await fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(timeoutMs) });
-  if (!res.ok) throw Object.assign(new Error(`Overpass HTTP ${res.status}`), { status: res.status });
+  if (!res.ok) {
+    const retryAfter = Number(res.headers.get('Retry-After')) || 0;
+    throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status, retryAfter });
+  }
   const text = await res.text();
   let json: any;
   try {
     json = JSON.parse(text);
   } catch {
     // Overpass reports runtime errors (timeouts, out of memory) as HTML/XML with a 200.
-    throw Object.assign(new Error('Overpass returned an error page (server busy or query too large)'), { status: 503 });
+    throw Object.assign(new Error('an error page (server busy or query too large)'), { status: 503 });
   }
   if (json.remark && /runtime error|timed out|out of memory/i.test(json.remark) && !json.elements?.length) {
-    throw Object.assign(new Error(`Overpass: ${json.remark}`), { status: 504 });
+    throw Object.assign(new Error(json.remark), { status: 504 });
   }
   return json.elements ?? [];
 }
 
-/** Runs an Overpass QL query (without the `[out:json]` header), with retries, mirror fallback and caching. */
+/** Runs an Overpass QL query (without the `[out:json]` header), with caching, server fallback and retries. */
 export function overpass(query: string, opts: { timeout?: number; status?: (m: string) => void } = {}): Promise<Element[]> {
   const timeout = opts.timeout ?? 60;
   const full = `[out:json][timeout:${timeout}];${query}`;
   const hit = cache.get(full);
   if (hit) return hit;
   const p = (async () => {
-    const body = 'data=' + encodeURIComponent(full);
-    let lastErr: unknown;
-    for (let i = 0; i < MAX_ATTEMPTS; i++) {
-      const url = ENDPOINTS[i % ENDPOINTS.length];
-      try {
-        return await attempt(url, body, (timeout + 15) * 1000);
-      } catch (e: any) {
-        lastErr = e;
-        const retryable = e?.status === undefined || RETRY_STATUS.has(e.status); // undefined = network error / timeout
-        if (!retryable) throw new Error(`OpenStreetMap request failed: ${e.message}`);
-        if (i < MAX_ATTEMPTS - 1) {
-          // Switch to the mirror immediately; back off once both have failed in a round.
-          const wait = i % 2 === 0 ? 300 : 1500 * 2 ** ((i - 1) / 2);
-          const why = e?.status ? `HTTP ${e.status}` : e?.name === 'TimeoutError' ? 'timed out' : 'network error';
-          opts.status?.(`OpenStreetMap busy (${why}), trying ${url === ENDPOINTS[0] ? 'mirror' : 'main server'} (attempt ${i + 2}/${MAX_ATTEMPTS})…`);
+    const stored = await cacheGet(full);
+    if (stored) return stored;
+    return serial(async () => {
+      const body = 'data=' + encodeURIComponent(full);
+      let lastErr: any;
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        const url = ranked()[0];
+        const wait = (downUntil.get(url) ?? 0) - Date.now();
+        if (wait > 0) {
+          // Every server is resting; wait for the soonest (briefly), or give up.
+          if (wait > 90000) break;
+          opts.status?.(`OpenStreetMap is busy; waiting ${Math.ceil(wait / 1000)} s before trying again…`);
           await sleep(wait);
         }
+        if (i > 0) opts.status?.(`Asking OpenStreetMap via ${NAMES[url]} (attempt ${i + 1}/${MAX_ATTEMPTS})…`);
+        const t0 = Date.now();
+        try {
+          const elements = await attempt(url, body, (timeout + 15) * 1000);
+          downUntil.delete(url);
+          void cachePut(full, elements);
+          return elements;
+        } catch (e: any) {
+          lastErr = e;
+          if (e?.status !== undefined && !RETRY_STATUS.has(e.status)) throw new Error(`OpenStreetMap request failed: ${e.message}`);
+          if (e?.status === 429) markDown(url, Math.max(e.retryAfter * 1000, 60000), 'rate limit');
+          else if (e?.status === undefined && e?.name !== 'TimeoutError' && Date.now() - t0 < 5000)
+            // An instant network error is almost always a refused connection: Overpass blocks
+            // addresses that made too many requests, usually for a while. Leave it alone.
+            markDown(url, 20 * 60000, 'refusing connections');
+          else markDown(url, 5000 * 2 ** Math.min(i, 3), e?.name === 'TimeoutError' ? 'timed out' : e?.status ? `HTTP ${e.status}` : 'network error');
+          opts.status?.(`OpenStreetMap: ${NAMES[url]} ${why.get(url)}${e?.status ? '' : ` (${e?.message ?? e})`}`);
+        }
       }
-    }
-    const why = (lastErr as any)?.message ?? String(lastErr);
-    throw new Error(`OpenStreetMap (Overpass) is unavailable right now: ${why}. Try again in a minute or use a smaller radius.`);
+      const main = why.get(ENDPOINTS[0]) === 'refusing connections' && (downUntil.get(ENDPOINTS[0]) ?? 0) > Date.now();
+      throw new Error(
+        main
+          ? 'OpenStreetMap is unavailable: the main Overpass server is refusing connections from your network (it temporarily blocks addresses that make lots of requests, usually for an hour or so) and the mirror is busy. Try again later; places you have already loaded are cached and still work.'
+          : `OpenStreetMap (Overpass) is busy right now (${lastErr?.message ?? lastErr}). Try again in a minute, or use a smaller radius.`,
+      );
+    });
   })();
   cache.set(full, p);
   p.catch(() => cache.delete(full)); // don't cache failures

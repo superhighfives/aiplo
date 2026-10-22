@@ -18,7 +18,7 @@ export interface GenContext {
 /** Paper settings a piece starts with (users can change them per piece). */
 export interface PaperDefaults {
   paper?: 'a4' | 'a5' | 'a3' | 'letter' | '9x12' | 'postcard' | 'square' | 'custom';
-  orientation?: 'landscape' | 'portrait';
+  orientation?: 'landscape' | 'portrait' | 'landscape-180' | 'portrait-180';
   margin?: number;
   w?: number;
   h?: number;

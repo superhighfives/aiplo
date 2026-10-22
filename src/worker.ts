@@ -1,9 +1,13 @@
 /// <reference lib="webworker" />
+import { installBundledData } from './lib/netcache';
 import { findArtwork } from './art';
 import type { GenContext } from './art/types';
 import { processLayers, toLayers, translateLayers, type Layer, type ProcessOptions } from './layers';
 import type { Values } from './params';
 import { mulberry32 } from './random';
+
+// Answer recorded requests for default knobs from public/data/ (see scripts/record-data.ts).
+installBundledData(import.meta.env.BASE_URL);
 
 export interface GenRequest {
   slug: string;
